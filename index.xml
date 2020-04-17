@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>heykieran code notes</title>
+    <link>https://heykieran.github.io/</link>
+    <description>Recent content on heykieran code notes</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 17 Apr 2020 13:39:37 -0400</lastBuildDate>
+    
+	<atom:link href="https://heykieran.github.io/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Setting-up Pedestal/Jetty with HTTPS</title>
+      <link>https://heykieran.github.io/posts/pedestal-jetty-https/</link>
+      <pubDate>Fri, 17 Apr 2020 13:39:37 -0400</pubDate>
+      
+      <guid>https://heykieran.github.io/posts/pedestal-jetty-https/</guid>
+      <description>Introduction
+Setting up Pedestal (using Jetty) with HTTPS isn&#39;t that difficult, but it is a bit &amp;ldquo;fiddly&amp;rdquo;. Essentially, you&#39;ll need a keystore so that Jetty has access to encryption keys and can encrypt pages sent over HTTPS.
+This post only deals with self-signed certificates, but if you want to use commercially-signed certificates it should work too. Just be aware that Jetty is happiest with pkcs12 formats - I&#39;ve never got it to work satisfactorily using other formats.</description>
+    </item>
+    
+  </channel>
+</rss>
