@@ -27,10 +27,11 @@
   
     
   
-  <meta name="description" content="CTO of Timpson Gray">
+  <meta name="description" content="Introduction
+Setting up Pedestal (using Jetty) with HTTPS isn&rsquo;t that difficult, but it is a bit &ldquo;fiddly&rdquo;. Essentially, you&rsquo;ll need a keystore so that Jetty has access to encryption keys and can encrypt pages sent over HTTPS.">
 
   
-  <link rel="alternate" hreflang="en-us" href="https://heykieran.github.io/404.html">
+  <link rel="alternate" hreflang="en-us" href="https://heykieran.github.io/post/pedestal-jetty-https/">
 
   
 
@@ -251,7 +252,7 @@
   <link rel="icon" type="image/png" href="/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_32x32_fill_lanczos_center_2.png">
   <link rel="apple-touch-icon" type="image/png" href="/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_192x192_fill_lanczos_center_2.png">
 
-  <link rel="canonical" href="https://heykieran.github.io/404.html">
+  <link rel="canonical" href="https://heykieran.github.io/post/pedestal-jetty-https/">
 
   
   
@@ -267,18 +268,64 @@
   <meta property="twitter:card" content="summary">
   
   <meta property="og:site_name" content="heykieran Code Notes">
-  <meta property="og:url" content="https://heykieran.github.io/404.html">
-  <meta property="og:title" content="404 Page not found | heykieran Code Notes">
-  <meta property="og:description" content="CTO of Timpson Gray"><meta property="og:image" content="https://heykieran.github.io/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_2.png">
+  <meta property="og:url" content="https://heykieran.github.io/post/pedestal-jetty-https/">
+  <meta property="og:title" content="Setting-up Pedestal/Jetty with HTTPS | heykieran Code Notes">
+  <meta property="og:description" content="Introduction
+Setting up Pedestal (using Jetty) with HTTPS isn&rsquo;t that difficult, but it is a bit &ldquo;fiddly&rdquo;. Essentially, you&rsquo;ll need a keystore so that Jetty has access to encryption keys and can encrypt pages sent over HTTPS."><meta property="og:image" content="https://heykieran.github.io/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_2.png">
   <meta property="twitter:image" content="https://heykieran.github.io/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_2.png"><meta property="og:locale" content="en-us">
   
     
+      <meta property="article:published_time" content="2020-04-17T13:39:37-04:00">
+    
+    <meta property="article:modified_time" content="2020-04-17T13:39:37-04:00">
   
 
   
 
 
+    
 
+
+
+
+
+
+  
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://heykieran.github.io/post/pedestal-jetty-https/"
+  },
+  "headline": "Setting-up Pedestal/Jetty with HTTPS",
+  
+  "datePublished": "2020-04-17T13:39:37-04:00",
+  "dateModified": "2020-04-17T13:39:37-04:00",
+  
+  "author": {
+    "@type": "Person",
+    "name": "Kieran Owens"
+  },
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "heykieran Code Notes",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://heykieran.github.io/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_192x192_fill_lanczos_center_2.png"
+    }
+  },
+  "description": "Introduction\nSetting up Pedestal (using Jetty) with HTTPS isn\u0026rsquo;t that difficult, but it is a bit \u0026ldquo;fiddly\u0026rdquo;. Essentially, you\u0026rsquo;ll need a keystore so that Jetty has access to encryption keys and can encrypt pages sent over HTTPS."
+}
+</script>
+
+  
 
   
 
@@ -286,10 +333,13 @@
   
 
 
+  
 
 
 
-  <title>404 Page not found | heykieran Code Notes</title>
+
+
+  <title>Setting-up Pedestal/Jetty with HTTPS | heykieran Code Notes</title>
 
 </head>
 
@@ -483,33 +533,317 @@
 </nav>
 
 
-  <div class="universal-wrapper pt-3">
-
-  <h1>Page not found</h1>
-
-  
-  
-  <form class="d-flex align-items-center mb-3">
-    <input name="q" type="search" class="form-control" placeholder="Search..." autocomplete="off">
-  </form>
-  
+  <article class="article">
 
   
 
-  <p>Perhaps you were looking for one of these?</p>
+
+
+
+
+
+
+
+
+
+
+
+  
 
   
   
   
-  <h2>Latest</h2>
-  <ul>
+<div class="article-container pt-3">
+  <h1>Setting-up Pedestal/Jetty with HTTPS</h1>
+
+  
+
+  
     
-      <li><a href="/post/pedestal-jetty-https/">Setting-up Pedestal/Jetty with HTTPS</a></li>
+
+
+<div class="article-metadata">
+
+  
+  
+  
+  
+  <div>
     
-  </ul>
+
+  
+  <span><a href="/author/kieran-owens/">Kieran Owens</a></span>
+  </div>
+  
+  
+
+  
+  <span class="article-date">
+    
+    
+      
+    
+    2020-04-17
+  </span>
+  
+
+  
+
+  
+
+  
+  
+  
+  <span class="middot-divider"></span>
+  <a href="/post/pedestal-jetty-https/#disqus_thread"></a>
+  
+
+  
+  
+  <span class="middot-divider"></span>
+  <span class="article-categories">
+    <i class="fas fa-folder mr-1"></i><a href="/category/blog-post/">Blog Post</a></span>
   
 
 </div>
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+</div>
+
+
+
+  <div class="article-container">
+
+    <div class="article-style">
+      <p><strong>Introduction</strong></p>
+<p>Setting up Pedestal (using Jetty) with HTTPS isn&rsquo;t that difficult, but
+it is a bit &ldquo;fiddly&rdquo;. Essentially, you&rsquo;ll need a keystore so that Jetty has
+access to encryption keys and can encrypt pages sent over HTTPS.</p>
+<p><em>This post only deals with self-signed certificates, but if you want to use
+commercially-signed certificates it should work too.</em></p>
+<div class="alert alert-note">
+  <div>
+    Just be aware that Jetty is happiest with the <code>pkcs12</code> format - I&rsquo;ve never got it to work satisfactorily
+using other formats.
+  </div>
+</div>
+<p><strong>Service Map (Pedestal)</strong></p>
+<p>In order to run Jetty under Pedestal you&rsquo;ll need to supply a service map. The following service map works for me. You can change it as you need. The important elements in the
+current context are where Jetty should look for the keystore (<code>keystore-location</code>),
+the <code>:ssl?</code> key, the <code>:ssl-port</code> and the <code>:security-provider</code>.</p>
+<p><em>Make sure the provider (Conscrypt) is in your <code>deps.edn</code> file</em></p>
+<pre><code>
+(def service-map
+  (let
+    [keystore-location
+     (if (System/getenv &quot;KEYSTORE_LOCATION&quot;)
+       (-&gt; (io/file (System/getenv &quot;KEYSTORE_LOCATION&quot;))
+           (.getCanonicalPath))
+       &quot;/home/user/security/jetty-keystore&quot;)]
+    {::http/host &quot;0.0.0.0&quot;
+     ::http/allowed-origins
+                 {:allowed-origins (fn[_] true)
+                  :creds true}
+     ::http/routes #(deref #'routes)
+     ::http/type   :jetty
+     ::http/container-options
+     {:context-configurator jetty-websocket-configurator
+      :h2c? true
+      :h2 true
+      :ssl? true
+      :ssl-port 8081
+      :keystore keystore-location
+      :key-password &quot;thepassword&quot;
+      :security-provider &quot;Conscrypt&quot;}
+     ::http/port 8080}))
+</code></pre>
+<p><strong>Jetty Keystore</strong></p>
+<p>In order for Pedestal to start with Jetty,
+it expects to find a keystore in a particular location
+(see <em>Service Map</em> notes above).</p>
+<p>To create the keystore (I&rsquo;ve plagiarized/assembled from the following
+pieces of information web, and I&rsquo;m afraid I can&rsquo;t remember the source(s).)</p>
+<p>Generate a private site key (<code>site.key</code>)</p>
+<pre><code>$ openssl genrsa -des3 -out site.key 2048
+</code></pre>
+<p>Make a copy of <code>site.key</code> and strip the password, so that it can be auto-loaded</p>
+<pre><code>$ cp site.key site.orig.key
+$ openssl rsa -in site.orig.key -out site.key
+</code></pre>
+<p>Generate a self-signed signing request (<code>site.csr</code>)</p>
+<pre><code>$ openssl req -new -key site.key -out site.csr
+</code></pre>
+<p>Generate a self-signed certificate (<code>sitex509.crt</code> - in <strong>x509</strong> format for loading into the keystore)</p>
+<pre><code>$ openssl req -new -x509 -key site.key -out sitex509.crt
+</code></pre>
+<p>Combine the self-signed certificate (<code>sitex509.crt</code>) and site key (<code>site.key</code>) and
+export it in <strong>pkcs12</strong> format (<code>site.pkcs12</code>)</p>
+<pre><code>$ openssl pkcs12 -inkey site.key -in sitex509.crt -export -out site.pkcs12
+</code></pre>
+<p>Rename the keystore (<code>site.pkcs12</code>) to jetty-keystore</p>
+<p>and adjust the service-map to use it</p>
+
+    </div>
+
+    
+
+
+
+
+
+<div class="article-tags">
+  
+  <a class="badge badge-light" href="/tag/clojure/">clojure</a>
+  
+  <a class="badge badge-light" href="/tag/pedestal/">pedestal</a>
+  
+  <a class="badge badge-light" href="/tag/https/">https</a>
+  
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    
+    
+
+
+
+
+
+  
+    
+    
+    
+      
+    
+    
+    
+    <div class="media author-card content-widget-hr">
+      
+        
+        <img class="avatar mr-3 avatar-circle" src="/author/kieran-owens/avatar_hu52a603635ecebd45650b162dadabb4e5_12861_270x270_fill_q90_lanczos_center.jpg" alt="Kieran Owens">
+      
+
+      <div class="media-body">
+        <h5 class="card-title"><a href="https://heykieran.github.io/">Kieran Owens</a></h5>
+        <h6 class="card-subtitle">CTO of Timpson Gray</h6>
+        <p class="card-text">Experienced Technology Leader with a particular interest in the use of functional languages for building accounting systems.</p>
+        <ul class="network-icon" aria-hidden="true">
+  
+    
+    
+    
+      
+    
+    
+    
+    
+    
+      
+    
+    <li>
+      <a href="https://twitter.com/heykieran" target="_blank" rel="noopener">
+        <i class="fab fa-twitter"></i>
+      </a>
+    </li>
+  
+    
+    
+    
+      
+    
+    
+    
+    
+    
+      
+    
+    <li>
+      <a href="https://github.com/heykieran" target="_blank" rel="noopener">
+        <i class="fab fa-github"></i>
+      </a>
+    </li>
+  
+</ul>
+
+      </div>
+    </div>
+  
+
+
+  
+
+
+
+
+
+<section id="comments">
+  
+    
+<div id="disqus_thread"></div>
+<script>
+  let disqus_config = function () {
+    
+    
+    
+  };
+  (function() {
+    if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+      document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+      return;
+    }
+    var d = document, s = d.createElement('script'); s.async = true;
+    s.src = 'https://' + "heykieran" + '.disqus.com/embed.js';
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+
+  
+</section>
+
+
+
+
+
+
+  
+  
+
+
+
+  </div>
+</article>
 
       
 
