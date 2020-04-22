@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Blog Post | heykieran Code Notes</title>
-    <link>https://heykieran.github.io/category/blog-post/</link>
-      <atom:link href="https://heykieran.github.io/category/blog-post/index.xml" rel="self" type="application/rss+xml" />
-    <description>Blog Post</description>
+    <title>cadence | heykieran Code Notes</title>
+    <link>https://heykieran.github.io/tag/cadence/</link>
+      <atom:link href="https://heykieran.github.io/tag/cadence/index.xml" rel="self" type="application/rss+xml" />
+    <description>cadence</description>
     <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Wed, 22 Apr 2020 11:10:38 -0400</lastBuildDate>
     <image>
       <url>https://heykieran.github.io/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_2.png</url>
-      <title>Blog Post</title>
-      <link>https://heykieran.github.io/category/blog-post/</link>
+      <title>cadence</title>
+      <link>https://heykieran.github.io/tag/cadence/</link>
     </image>
     
     <item>
@@ -112,81 +112,6 @@ available as it may prove helpful to others who would like to use Clojure with C
 &lt;h2 id=&#34;whats-next&#34;&gt;What&amp;rsquo;s Next?&lt;/h2&gt;
 &lt;p&gt;As time allows I&amp;rsquo;ll probably return to the code, making it more idiomatic. But do let me know if you find it helpful, or share
 your suggestions for improvement.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Setting-up Pedestal/Jetty with HTTPS</title>
-      <link>https://heykieran.github.io/post/pedestal-jetty-https/</link>
-      <pubDate>Fri, 17 Apr 2020 13:39:37 -0400</pubDate>
-      <guid>https://heykieran.github.io/post/pedestal-jetty-https/</guid>
-      <description>&lt;p&gt;&lt;strong&gt;Introduction&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Setting up Pedestal (using Jetty) with HTTPS isn&amp;rsquo;t that difficult, but
-it is a bit &amp;ldquo;fiddly&amp;rdquo;. Essentially, you&amp;rsquo;ll need a keystore so that Jetty has
-access to encryption keys and can encrypt pages sent over HTTPS.&lt;/p&gt;
-&lt;p&gt;&lt;em&gt;This post only deals with self-signed certificates, but if you want to use
-commercially-signed certificates it should work too.&lt;/em&gt;&lt;/p&gt;
-&lt;div class=&#34;alert alert-note&#34;&gt;
-  &lt;div&gt;
-    Just be aware that Jetty is happiest with the &lt;code&gt;pkcs12&lt;/code&gt; format - I&amp;rsquo;ve never got it to work satisfactorily
-using other formats.
-  &lt;/div&gt;
-&lt;/div&gt;
-&lt;p&gt;&lt;strong&gt;Service Map (Pedestal)&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;In order to run Jetty under Pedestal you&amp;rsquo;ll need to supply a service map. The following service map works for me. You can change it as you need. The important elements in the
-current context are where Jetty should look for the keystore (&lt;code&gt;keystore-location&lt;/code&gt;),
-the &lt;code&gt;:ssl?&lt;/code&gt; key, the &lt;code&gt;:ssl-port&lt;/code&gt; and the &lt;code&gt;:security-provider&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;&lt;em&gt;Make sure the provider (Conscrypt) is in your &lt;code&gt;deps.edn&lt;/code&gt; file&lt;/em&gt;&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;
-(def service-map
-  (let
-    [keystore-location
-     (if (System/getenv &amp;quot;KEYSTORE_LOCATION&amp;quot;)
-       (-&amp;gt; (io/file (System/getenv &amp;quot;KEYSTORE_LOCATION&amp;quot;))
-           (.getCanonicalPath))
-       &amp;quot;/home/user/security/jetty-keystore&amp;quot;)]
-    {::http/host &amp;quot;0.0.0.0&amp;quot;
-     ::http/allowed-origins
-                 {:allowed-origins (fn[_] true)
-                  :creds true}
-     ::http/routes #(deref #&#39;routes)
-     ::http/type   :jetty
-     ::http/container-options
-     {:context-configurator jetty-websocket-configurator
-      :h2c? true
-      :h2 true
-      :ssl? true
-      :ssl-port 8081
-      :keystore keystore-location
-      :key-password &amp;quot;thepassword&amp;quot;
-      :security-provider &amp;quot;Conscrypt&amp;quot;}
-     ::http/port 8080}))
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;Jetty Keystore&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;In order for Pedestal to start with Jetty,
-it expects to find a keystore in a particular location
-(see &lt;em&gt;Service Map&lt;/em&gt; notes above).&lt;/p&gt;
-&lt;p&gt;To create the keystore (I&amp;rsquo;ve plagiarized/assembled from the following
-pieces of information web, and I&amp;rsquo;m afraid I can&amp;rsquo;t remember the source(s).)&lt;/p&gt;
-&lt;p&gt;Generate a private site key (&lt;code&gt;site.key&lt;/code&gt;)&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$ openssl genrsa -des3 -out site.key 2048
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Make a copy of &lt;code&gt;site.key&lt;/code&gt; and strip the password, so that it can be auto-loaded&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$ cp site.key site.orig.key
-$ openssl rsa -in site.orig.key -out site.key
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Generate a self-signed signing request (&lt;code&gt;site.csr&lt;/code&gt;)&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$ openssl req -new -key site.key -out site.csr
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Generate a self-signed certificate (&lt;code&gt;sitex509.crt&lt;/code&gt; - in &lt;strong&gt;x509&lt;/strong&gt; format for loading into the keystore)&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$ openssl req -new -x509 -key site.key -out sitex509.crt
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Combine the self-signed certificate (&lt;code&gt;sitex509.crt&lt;/code&gt;) and site key (&lt;code&gt;site.key&lt;/code&gt;) and
-export it in &lt;strong&gt;pkcs12&lt;/strong&gt; format (&lt;code&gt;site.pkcs12&lt;/code&gt;)&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$ openssl pkcs12 -inkey site.key -in sitex509.crt -export -out site.pkcs12
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Rename the keystore (&lt;code&gt;site.pkcs12&lt;/code&gt;) to jetty-keystore&lt;/p&gt;
-&lt;p&gt;and adjust the service-map to use it&lt;/p&gt;
 </description>
     </item>
     

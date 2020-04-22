@@ -5,12 +5,115 @@
     <link>https://heykieran.github.io/author/kieran-owens/</link>
       <atom:link href="https://heykieran.github.io/author/kieran-owens/index.xml" rel="self" type="application/rss+xml" />
     <description>Kieran Owens</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Fri, 17 Apr 2020 13:39:37 -0400</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Wed, 22 Apr 2020 11:10:38 -0400</lastBuildDate>
     <image>
       <url>https://heykieran.github.io/author/kieran-owens/avatar_hu52a603635ecebd45650b162dadabb4e5_12861_270x270_fill_q90_lanczos_center.jpg</url>
       <title>Kieran Owens</title>
       <link>https://heykieran.github.io/author/kieran-owens/</link>
     </image>
+    
+    <item>
+      <title>Cadence Workflow and Clojure</title>
+      <link>https://heykieran.github.io/post/cadence-and-clojure/</link>
+      <pubDate>Wed, 22 Apr 2020 11:10:38 -0400</pubDate>
+      <guid>https://heykieran.github.io/post/cadence-and-clojure/</guid>
+      <description>&lt;h2 id=&#34;introduction&#34;&gt;Introduction&lt;/h2&gt;
+&lt;div class=&#34;alert alert-note&#34;&gt;
+  &lt;div&gt;
+    A repository with some working code and implementation notes can be found &lt;a href=&#34;https://github.com/heykieran/cadence-test&#34;&gt;here&lt;/a&gt;.
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;p&gt;I had the occasion recently to investigate, and cursorily evaluate, a number of workflow
+orchestration systems for use on a project with which I was involved. One of those systems,
+
+&lt;a href=&#34;https://cadenceworkflow.io/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;&lt;strong&gt;Cadence&lt;/strong&gt;&lt;/a&gt;, particularly appealed to me - there was something very &lt;em&gt;Clojuresque&lt;/em&gt; about it;
+certainly something very suggestive of a functional language.&lt;/p&gt;
+&lt;p&gt;It has the concept of state &lt;em&gt;durability&lt;/em&gt; (in workflow functions) that bears more than a passing
+resemblance to the persistent data structures of Clojure - but extended across time. This
+concept, similar to checkpoints, opens avenues to consistent, predictable restarts after
+failures. If one can restore the complete state of a system to a known &lt;em&gt;good-state&lt;/em&gt; then one can
+continue as if the failure had never occurred. Of course, if system-wide (or even better,
+distributed) non-volatile RAM ever becomes a reality then Cadence would not be needed. This
+strikes me as essence of the problem Cadence is attempting to solve, or, at least, the gap it&amp;rsquo;s
+attempting to bridge. Cadence also allows, through activities, the use of non-persistent
+data structures which can be considered as being analogous to the concept of a &lt;em&gt;side-effect&lt;/em&gt; in Clojure.&lt;/p&gt;
+&lt;p&gt;The separation of the &lt;em&gt;functional&lt;/em&gt; from the &lt;em&gt;side-effect&lt;/em&gt;-ing, and the elision of
+infrastructure and communication failure concerns leaves developers with simpler, almost always
+more tractable, domain logic concerns and significantly reduces the cognitive load.
+This is similar to the benefits often realized through the adoption of functional languages.&lt;/p&gt;
+&lt;h2 id=&#34;a-brief-tour-to-cadence&#34;&gt;A Brief Tour to Cadence&lt;/h2&gt;
+&lt;p&gt;
+&lt;a href=&#34;https://cadenceworkflow.io/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Cadence&lt;/a&gt; is a workflow automation system developed by Uber. It shares many features
+with other workflow automation systems but differs by being uniquely
+&lt;em&gt;fault-oblivious&lt;/em&gt; rather than merely &lt;em&gt;fault-tolerant&lt;/em&gt;. The approach adopted by Cadence simplifies
+greatly the work of developers who are relieved of many of the burdens of coordinating
+activities and recovering from system or service failure.&lt;/p&gt;
+&lt;p&gt;Cadence is complex but three concepts core to its understanding are&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The Cadence Service itself,&lt;/li&gt;
+&lt;li&gt;Workflow Workers and&lt;/li&gt;
+&lt;li&gt;Activity Workers&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The Cadence service, backed by a persistent data-store such as Cassandra or MySql, is responsible for
+orchestrating the activities of both type of workers, for maintaining history, and in the case of failure,
+for recovering the state of all workflows (but not activities).&lt;/p&gt;
+&lt;p&gt;Conceptually, the Cadence service instructs a Workflow Worker to execute a Workflow function. The Workflow function,
+which implements business logic, is guaranteed by Cadence to be &lt;em&gt;durable&lt;/em&gt;. That is, its state, including its
+thread stack and thread-local variables, are known and stored by Cadence, and in the case of failure
+they are restored.&lt;/p&gt;
+&lt;p&gt;Workflows, like the business processes they typically model, may be long-running. It&amp;rsquo;s not unusual for a
+real-world business process to take days or even months to complete, and Cadence provides excellent facilities
+to support such long-running processes within workflow functions. Therefore, the durability of the workflow functions (with the guaranteed
+recovery of their states across failures) enables a simple &lt;em&gt;straight-line&lt;/em&gt; view of the business logic. This
+greatly reduces the complexity of the development process by reducing the burden on the developer to anticipate
+and mitigate &lt;strong&gt;all&lt;/strong&gt; failure modes.&lt;/p&gt;
+&lt;p&gt;In order to be able to guarantee durability across failures Cadence places a number of
+restrictions on the code in Workflow functions. The code must be &lt;em&gt;deterministic&lt;/em&gt; i.e. executing the code
+must produce the same result no matter how often it is run. Therefore, certain actions are forbidden within
+workflow code - examples being: interacting &lt;strong&gt;directly&lt;/strong&gt; with external services, getting the time, getting random values,
+and creating or suspending threads.&lt;/p&gt;
+&lt;p&gt;These type of actions are fundamentally non-deterministic and would make full recovery of the workflow state impossible.
+However, the Cadence API provides alternatives for &lt;strong&gt;some&lt;/strong&gt; of these that produce deterministic behavior; and
+which assure the recoverability of the function&amp;rsquo;s local variables, threads and state.&lt;/p&gt;
+&lt;p&gt;For situations requiring interaction with external services (&lt;em&gt;the outside world&lt;/em&gt;), Cadence insists
+that all communication be conducted through Activities, using Activity Workers. Activities do not share with Workflows
+any of Cadence&amp;rsquo;s requirement that they be deterministic. Essentially anything is allowed in activities and any
+clean-up after failure becomes the responsibility of the developer rather than the Cadence service.&lt;/p&gt;
+&lt;p&gt;Conceptually, &lt;em&gt;(but not precisely)&lt;/em&gt;, a Workflow Worker will start an Activity Worker (or multiple Activity Workers) to interact with the
+outside world. Examples of an Activity might be interacting with a web-service, getting or saving a record to
+a database, or awaiting human input, such as a decision. Cadence offers no guarantees about activity state,
+and that state is not recovered in the case of failures of the Cadence infrastructure i.e. within the Cadence service itself.&lt;/p&gt;
+&lt;p&gt;In order to control a running workflow, or to affect its state, it can be signalled using events delivered by Cadence.&lt;/p&gt;
+&lt;h2 id=&#34;cadence--clojure-challenges&#34;&gt;Cadence &amp;amp; Clojure Challenges&lt;/h2&gt;
+&lt;p&gt;The signature of the worker registration function is &lt;code&gt;registerWorkflowImplementationTypes(java.lang.Class&amp;lt;?&amp;gt;... workflowImplementationClasses)&lt;/code&gt;
+and in the documentation there is the note&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;The reason for registration accepting workflow class, but not the workflow instance is that workflows are stateful and a new instance is created for each workflow execution.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;What&amp;rsquo;s not noted, but implied, is that the constructor for the classes must have zero-arg constructors. This is problematic
+for Clojure as instance variable declared in &lt;code&gt;deftype&lt;/code&gt; will create on constructor taking exactly that number of instance variables as
+arguments.&lt;/p&gt;
+&lt;p&gt;You might then consider inheritance of the &lt;code&gt;deftype&lt;/code&gt;-d class to workaround the zero arg constructor issue
+leaving a cleaner, more Clojure-esque result.&lt;/p&gt;
+&lt;p&gt;However, although &lt;code&gt;deftype&lt;/code&gt; can create a Java class with the fields you need, by default these fields are immutable;
+but you could use &lt;code&gt;:volatile-mutable&lt;/code&gt; to allow the fields to be settable. Unfortunately, the bigger problem
+is that the generated class is &lt;code&gt;public final&lt;/code&gt; which effectively eliminates the possibility that we
+could use the class as a base class in &lt;code&gt;gen-class&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;This might have been helpful as we could define a zero-args constructor in &lt;code&gt;gen-class&lt;/code&gt; and then using the &lt;code&gt;:constructors&lt;/code&gt;
+field map that constructor to the base class constructor and then assign default values to the field in the &lt;code&gt;:init&lt;/code&gt; method.
+The fact that the &lt;code&gt;deftype&lt;/code&gt;-ed class is &lt;code&gt;final&lt;/code&gt; eliminates that approach.&lt;/p&gt;
+&lt;h2 id=&#34;working-cadence--clojure-code&#34;&gt;Working Cadence &amp;amp; Clojure Code&lt;/h2&gt;
+&lt;p&gt;In order to fully investigate using Clojure with Cadence I developed a small set of demos to demonstrate how it works,
+works around what doesn&amp;rsquo;t, and exercises the result. &lt;strong&gt;Very&lt;/strong&gt; little consideration was given to making the code more idiomatic,
+at least from a Clojure perspective, or even particularly effective. I only making the 
+&lt;a href=&#34;https://github.com/heykieran/cadence-test&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;repository&lt;/a&gt;
+available as it may prove helpful to others who would like to use Clojure with Cadence.&lt;/p&gt;
+&lt;p&gt;The repository also contains further notes on the implementation and lessons learnt.&lt;/p&gt;
+&lt;h2 id=&#34;whats-next&#34;&gt;What&amp;rsquo;s Next?&lt;/h2&gt;
+&lt;p&gt;As time allows I&amp;rsquo;ll probably return to the code, making it more idiomatic. But do let me know if you find it helpful, or share
+your suggestions for improvement.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Setting-up Pedestal/Jetty with HTTPS</title>
