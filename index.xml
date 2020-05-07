@@ -5,12 +5,114 @@
     <link>https://heykieran.github.io/</link>
       <atom:link href="https://heykieran.github.io/index.xml" rel="self" type="application/rss+xml" />
     <description>heykieran Code Notes</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Mon, 27 Apr 2020 11:53:08 -0400</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Thu, 07 May 2020 11:26:15 -0400</lastBuildDate>
     <image>
       <url>https://heykieran.github.io/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_2.png</url>
       <title>heykieran Code Notes</title>
       <link>https://heykieran.github.io/</link>
     </image>
+    
+    <item>
+      <title>Clojure Configurations with Docker Secrets</title>
+      <link>https://heykieran.github.io/post/clojure-configuration/</link>
+      <pubDate>Thu, 07 May 2020 11:26:15 -0400</pubDate>
+      <guid>https://heykieran.github.io/post/clojure-configuration/</guid>
+      <description>&lt;h1 id=&#34;passing-a-configuration-to-a-clojure-application&#34;&gt;Passing a &amp;ldquo;Configuration&amp;rdquo; to a Clojure Application&lt;/h1&gt;
+&lt;h2 id=&#34;introduction&#34;&gt;Introduction&lt;/h2&gt;
+&lt;p&gt;There are many ways to pass configuration values to a Clojure application. This piece will cover four of them:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;a href=&#34;#using-command-line-parameters&#34;&gt;Command Line Parameters&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;a href=&#34;#using-environment-variables&#34;&gt;Environment Variables&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;a href=&#34;#using-dynamic-environment-variables&#34;&gt;Dynamic Environment Variables&lt;/a&gt;, and&lt;/li&gt;
+&lt;li&gt;
+&lt;a href=&#34;#using-docker-secrets---with-dynamic-environment-variables&#34;&gt;Docker Secrets&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;The first two are briefly discussed, while greater time is spent on the final two. Of the four, the 
+&lt;a href=&#34;#our-example-with-secrets&#34;&gt;last&lt;/a&gt; is particularly useful to keep &lt;strong&gt;secure&lt;/strong&gt; configuration values that &lt;strong&gt;ought&lt;/strong&gt; to be kept so - passwords, private keys etc.&lt;/p&gt;
+&lt;h3 id=&#34;using-command-line-parameters&#34;&gt;Using Command Line Parameters&lt;/h3&gt;
+&lt;p&gt;If one starts Clojure from the command line using the &lt;code&gt;-m&lt;/code&gt; option specifying a namespace, Clojure will execute the &lt;code&gt;-main&lt;/code&gt; function from that namespace, passing any further arguments on the command line as parameters to &lt;code&gt;-main&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;For example, the following Clojure code&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-Clojure&#34;&gt;(ns main.core)
+
+(defn -main [args]
+  (println args))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;which can be executed from the command line using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ clj -m main.core &amp;quot;Hello World!&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;will result in the string &lt;code&gt;Hello World!&lt;/code&gt; being printed to the console.&lt;/p&gt;
+&lt;h3 id=&#34;using-environment-variables&#34;&gt;Using Environment Variables&lt;/h3&gt;
+&lt;p&gt;As an alternative to command line parameters, it&amp;rsquo;s often convenient to have your Clojure application read its parameters from the application&amp;rsquo;s execution environment i.e. environment variables or JVM system properties.&lt;/p&gt;
+&lt;p&gt;So running&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ export MYARGS=&amp;quot;Hello World!&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;at the command line, and changing the &lt;code&gt;-main&lt;/code&gt; function to&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-Clojure&#34;&gt;(defn -main [&amp;amp; args]
+  (println (System/getenv &amp;quot;MYARGS&amp;quot;)))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;you can now run the application using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ clj -m main.core
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and see the same result.&lt;/p&gt;
+&lt;p&gt;The value of the &lt;code&gt;MYARGS&lt;/code&gt; environment variable is read from the environment and then printed to the console.&lt;/p&gt;
+&lt;p&gt;Unfortunately, as convenient as this is when executing the code, it can be a little inconvenient during development. If this is the only place you use the variable there&amp;rsquo;s little lost, but if the value is used in other areas of your application e.g. in other namespaces, any changes to its name or expected type will lead to an amount of error-prone &amp;ldquo;code surgery&amp;rdquo;.&lt;/p&gt;
+&lt;p&gt;Also, &lt;code&gt;env&lt;/code&gt; variables are, by their nature, strings; so if you need the value as, for instance, an &lt;code&gt;int&lt;/code&gt; you&amp;rsquo;ll need to perform the casting and error-checking at the time of initialization.&lt;/p&gt;
+&lt;h3 id=&#34;using-dynamic-environment-variables&#34;&gt;Using &amp;ldquo;Dynamic&amp;rdquo; Environment Variables&lt;/h3&gt;
+&lt;p&gt;WalmartLabs have published a Clojure library on 
+&lt;a href=&#34;https://github.com/walmartlabs/dyn-edn&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;GitHub&lt;/a&gt; to address many of these issues. The library centralizes the reading of &lt;code&gt;env&lt;/code&gt; variables, and also allows for existence-checking, the setting of default values, merging with JVM system properties, casting, type-checking, and composition.&lt;/p&gt;
+&lt;p&gt;The library makes it possible to define in a simple &lt;code&gt;edn&lt;/code&gt; file the &lt;em&gt;shape&lt;/em&gt; of your configuration data and have it parsed correctly from the environment (and other locations) into the structure you want.&lt;/p&gt;
+&lt;p&gt;As an example, if you have a file called &lt;code&gt;config.edn&lt;/code&gt; somewhere on your classpath with&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-edn&#34;&gt;{:app-configuration
+ {:myargs #dyn/prop MYARGS}}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and change the &lt;code&gt;main/core.clj&lt;/code&gt; file to&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-Clojure&#34;&gt;(ns main.core
+  (:require
+   [clojure.edn :as edn]
+   [clojure.java.io :as io]
+   [com.walmartlabs.dyn-edn :refer [env-readers]]))
+
+(def app-config
+  (-&amp;gt;&amp;gt; &amp;quot;config.edn&amp;quot;
+     io/resource
+     slurp
+     (edn/read-string {:readers (env-readers)})))
+
+(defn -main [&amp;amp; args]
+  (println (get-in app-config [:app-configuration :myargs])))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and then run the application using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ clj -m main.core
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You&amp;rsquo;ll see the same result - but, the application&amp;rsquo;s configuration has been correctly (and automatically) parsed into a configuration structure and is available as a map named &lt;code&gt;main.core/app-config&lt;/code&gt; that can be used throughout your application.&lt;/p&gt;
+&lt;p&gt;The use of the &lt;code&gt;config.edn&lt;/code&gt; file also allows you to view the expected configuration parameters, or add to them, or change their default values in one central location - &lt;strong&gt;very&lt;/strong&gt; convenient.&lt;/p&gt;
+&lt;h3 id=&#34;using-docker-secrets---with-dynamic-environment-variables&#34;&gt;Using Docker Secrets - with Dynamic Environment Variables&lt;/h3&gt;
+&lt;p&gt;An area where &lt;code&gt;env&lt;/code&gt; variables are extensively used as configuration parameters is when an application is being run inside a docker container. By providing one or more &lt;code&gt;-e&lt;/code&gt; options to the &lt;code&gt;docker run&lt;/code&gt; command, it&amp;rsquo;s possible to establish the configuration environment for the application (if that&amp;rsquo;s where the application expects to find it).&lt;/p&gt;
+&lt;p&gt;Unfortunately, certain configuration parameters contain sensitive information, such as passwords or private keys and one can&amp;rsquo;t realistically embed those values in the application&amp;rsquo;s code. They may change frequently; they may need to differ from one container to another; and their very existence in the code represents a risk that they&amp;rsquo;ll &amp;ldquo;leak&amp;rdquo; into an SCM.&lt;/p&gt;
+&lt;p&gt;Of course, the use of environment variables is a good alternative to embedded code values, but represents a different, albeit smaller, set of risks. Anyone with access to the docker instance could recover the environment variables passed to a container during initialization.&lt;/p&gt;
+&lt;p&gt;In order to address this, Docker introduced the concept of &lt;strong&gt;secrets&lt;/strong&gt; with docker &lt;strong&gt;swarm&lt;/strong&gt;. Secrets allow sensitive information to be defined securely, and then selectively made available to containers which are running as docker services. It is only within the running container that the secret&amp;rsquo;s value is available as contents of files mounted from an &lt;em&gt;in-memory&lt;/em&gt; filesystem, by default at &lt;code&gt;/run/secrets/&amp;lt;secret_name&amp;gt;&lt;/code&gt;, where they can be accessed by the application.&lt;/p&gt;
+&lt;p&gt;In order to tie together environment variables with secrets, I&amp;rsquo;ve submitted a PR to the maintainer of the &lt;code&gt;walmart-labs/dyn-edn&lt;/code&gt; library which, in addition to &lt;code&gt;env&lt;/code&gt; variables and system properties, &lt;em&gt;merges in&lt;/em&gt; docker secrets to the set of variable available to the library&amp;rsquo;s readers: &lt;code&gt;#dyn/prop&lt;/code&gt;, &lt;code&gt;#dyn/join&lt;/code&gt;, &lt;code&gt;#dyn/long&lt;/code&gt;, &lt;code&gt;#dyn/boolean&lt;/code&gt;, and &lt;code&gt;#dyn/keyword&lt;/code&gt;.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;
+The PR was accepted by the maintainer, but the library hasn&amp;rsquo;t yet made it to clojars. In order to use the secrets functionality you&amp;rsquo;ll need to add the following to your &lt;code&gt;:deps&lt;/code&gt; entry in &lt;code&gt;deps.edn&lt;/code&gt;. This will pull the appropriate version of the code.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code&gt;com.walmartlabs/dyn-edn 
+  {:git/url &amp;quot;https://github.com/walmartlabs/dyn-edn.git&amp;quot;
+   :sha &amp;quot;855a775959cf1bec531a303a323e6f05f7b260fb&amp;quot;}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;our-example-with-secrets&#34;&gt;Our Example with Secrets&lt;/h4&gt;
+&lt;p&gt;To use a docker secret in lieu of the &lt;code&gt;MYARGS&lt;/code&gt; env variable used in previous examples all one needs to do is create a secret called &lt;code&gt;MYARGS&lt;/code&gt; with the appropriate value&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ printf &amp;quot;Hello World!&amp;quot; | docker secret create MYARGS -
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and, when starting the container as a docker service, authorize the service to use that secret&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ docker service create --replicas 1 --secret MYARGS --name &amp;lt;svcname&amp;gt; &amp;lt;image containing the app&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;No change needs to be made to the &lt;code&gt;config.edn&lt;/code&gt; file, or to the source code.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Pedestal API, ClojureScript SPA and Google Authentication</title>
