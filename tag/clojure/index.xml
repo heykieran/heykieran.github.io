@@ -5,12 +5,347 @@
     <link>https://heykieran.github.io/tag/clojure/</link>
       <atom:link href="https://heykieran.github.io/tag/clojure/index.xml" rel="self" type="application/rss+xml" />
     <description>clojure</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Thu, 07 May 2020 11:26:15 -0400</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Thu, 07 May 2020 12:10:26 -0400</lastBuildDate>
     <image>
       <url>https://heykieran.github.io/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_2.png</url>
       <title>clojure</title>
       <link>https://heykieran.github.io/tag/clojure/</link>
     </image>
+    
+    <item>
+      <title>Deploy a Clojure Pedestal API Server &amp; React/ClojureScript Web Application to Docker</title>
+      <link>https://heykieran.github.io/post/deploy-pedestal-react-to-docker/</link>
+      <pubDate>Thu, 07 May 2020 12:10:26 -0400</pubDate>
+      <guid>https://heykieran.github.io/post/deploy-pedestal-react-to-docker/</guid>
+      <description>&lt;h2 id=&#34;introduction&#34;&gt;Introduction&lt;/h2&gt;
+&lt;p&gt;In this post I&amp;rsquo;ll show how to build and deploy to docker a fully-functioning application comprising a secure Pedestal API web-server and a React front-end application written in ClojureScript which accesses the server.&lt;/p&gt;
+&lt;p&gt;For this example I&amp;rsquo;ll be using the Pedestal/React application I previously discussed in this 
+&lt;a href=&#34;https://heykieran.github.io/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;blog post&lt;/a&gt; (with its code 
+&lt;a href=&#34;https://https://github.com/heykieran/clj-pedestal-google&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;here&lt;/a&gt;).&lt;/p&gt;
+&lt;h2 id=&#34;outline-of-the-steps&#34;&gt;Outline of the Steps&lt;/h2&gt;
+&lt;p&gt;I&amp;rsquo;ll set up a working directory for the build, clone the target application into a sub-directory, compile the target, package it and its dependencies to java byte code, assemble them into a jar, create a docker image for the application, and deploy it as a docker service.&lt;/p&gt;
+&lt;h3 id=&#34;background-challenges--tools&#34;&gt;Background, Challenges &amp;amp; Tools&lt;/h3&gt;
+&lt;p&gt;During this exercise, I&amp;rsquo;ll try to keep separate the application I&amp;rsquo;m building from the application doing the building. This isn&amp;rsquo;t strictly necessary but it will help illustrate a procedure generally applicable to any Clojure application.&lt;/p&gt;
+&lt;p&gt;One of the challenges of this approach is that I&amp;rsquo;ll need to deal with two &lt;code&gt;deps.edn&lt;/code&gt; files - one for the build environment and one for the application being built. Each &lt;code&gt;deps&lt;/code&gt; file contains relative paths (&lt;code&gt;:paths&lt;/code&gt; and &lt;code&gt;:extra-paths&lt;/code&gt;) relative to the root of the project directory to which it belongs.&lt;/p&gt;
+&lt;p&gt;If I am to avoid changing in any way the &lt;code&gt;deps&lt;/code&gt; file for the project being built and yet still ensure that the built artifacts end up in the correct location within the build project&amp;rsquo;s directory structure I will need a way to inform the compiler about which paths to use, but relative to the &lt;strong&gt;build&lt;/strong&gt; project&amp;rsquo;s directory and not as specified in the &lt;strong&gt;target&amp;rsquo;s&lt;/strong&gt; &lt;code&gt;deps.edn&lt;/code&gt; file.&lt;/p&gt;
+&lt;p&gt;As an example, let&amp;rsquo;s suppose that the build project is at &lt;code&gt;./clj-deploy-docker&lt;/code&gt; and the project being built will be cloned into &lt;code&gt;./clj-deploy-docker/target-app&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;deps.edn&lt;/code&gt; file in &lt;code&gt;./clj-deploy-docker/target-app&lt;/code&gt; will contain an entry for the alias &lt;code&gt;:main&lt;/code&gt; as below&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-edn&#34;&gt;:aliases
+ {:main
+  {:paths [&amp;quot;src&amp;quot;]
+   :extra-deps {ch.qos.logback/logback-classic {:mvn/version &amp;quot;1.2.3&amp;quot;}
+                org.clojure/tools.logging {:mvn/version &amp;quot;0.4.1&amp;quot;}
+                ring/ring-core {:mvn/version &amp;quot;1.8.0&amp;quot;}
+                ring/ring-jetty-adapter {:mvn/version &amp;quot;1.8.0&amp;quot;}
+                ring/ring-devel {:mvn/version &amp;quot;1.8.0&amp;quot;}
+                io.pedestal/pedestal.service {:mvn/version &amp;quot;0.5.7&amp;quot;}
+                io.pedestal/pedestal.route {:mvn/version &amp;quot;0.5.7&amp;quot;}
+                io.pedestal/pedestal.jetty {:mvn/version &amp;quot;0.5.7&amp;quot;}
+                buddy {:mvn/version &amp;quot;2.0.0&amp;quot;}
+                hiccup {:mvn/version &amp;quot;1.0.5&amp;quot;}
+                org.conscrypt/conscrypt-openjdk-uber {:mvn/version &amp;quot;2.2.1&amp;quot;}
+                org.eclipse.jetty/jetty-alpn-conscrypt-server {:mvn/version &amp;quot;9.4.24.v20191120&amp;quot;}
+                com.google.api-client/google-api-client {:mvn/version &amp;quot;1.30.6&amp;quot;}
+                com.walmartlabs/dyn-edn 
+                {:git/url &amp;quot;https://github.com/walmartlabs/dyn-edn.git&amp;quot; 
+                 :sha &amp;quot;855a775959cf1bec531a303a323e6f05f7b260fb&amp;quot;}}
+   :extra-paths [&amp;quot;resources&amp;quot; &amp;quot;common-src&amp;quot; ]}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In order to access and use this alias correctly from the build project&amp;rsquo;s directory (&lt;code&gt;clj-deploy-docker&lt;/code&gt;) I will need to adjust (&lt;em&gt;in some way&lt;/em&gt;) the paths so that the compiler is operating with the correct class path i.e. the class path of the target rather than the class path of the build. Therefore, I&amp;rsquo;ll need to let the compiler know (&lt;em&gt;in some way&lt;/em&gt;) that the &lt;code&gt;:paths&lt;/code&gt; and &lt;code&gt;:extra-paths&lt;/code&gt; vectors should read&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;:paths [&amp;quot;target-app/src&amp;quot;]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;:extra-paths [&amp;quot;target-app/resources&amp;quot; &amp;quot;target-app/common-src&amp;quot; ]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;respectively.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;On the other hand, the maven coordinates in the target&amp;rsquo;s &lt;code&gt;deps.edn&lt;/code&gt; file are correct, so we can leave the &lt;code&gt;:deps&lt;/code&gt; and &lt;code&gt;:extra-deps&lt;/code&gt; values as they are found.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;As for the &lt;em&gt;&amp;ldquo;in some way&amp;rdquo;&lt;/em&gt;, I will be using the 
+&lt;a href=&#34;https://github.com/EwenG/badigeon&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Badigeon&lt;/a&gt; library to achieve this. Many of Badigeon&amp;rsquo;s API&amp;rsquo;s take a &lt;code&gt;:deps-map&lt;/code&gt; as input. This is an &lt;em&gt;in-memory&lt;/em&gt; map whose structure is the same as a &lt;code&gt;deps.edn&lt;/code&gt; file. This will allow me to read the &lt;code&gt;deps&lt;/code&gt; file, make in-memory adjustments and feed it to to API to do the &lt;em&gt;bundling&lt;/em&gt; and &lt;em&gt;compiling&lt;/em&gt; with a classpath relative to any directory I choose (i.e. relative to &lt;code&gt;./clj-deploy-docker&lt;/code&gt;).&lt;/p&gt;
+&lt;h3 id=&#34;create-a-working-directory-for-the-project&#34;&gt;Create a Working Directory for the Project&lt;/h3&gt;
+&lt;p&gt;Create a working directory for the project, and &lt;code&gt;cd&lt;/code&gt; into it&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ mkdir clj-deploy-docker
+$ cd clj-deploy-docker
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;setting-up-the-application-to-be-built&#34;&gt;Setting up the Application to be built&lt;/h3&gt;
+&lt;p&gt;Now, I&amp;rsquo;ll clone the repository of the application I want to build into a directory &lt;code&gt;target-app&lt;/code&gt; under my working directory.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ git clone https://github.com/heykieran/clj-pedestal-google.git target-app
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;As mentioned above, for this exercise I will be using a library called 
+&lt;a href=&#34;https://github.com/EwenG/badigeon&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Badigeon&lt;/a&gt; to organize and compile the sources. It leverages many of the tools &amp;amp; libraries already available in &lt;code&gt;clojure.core&lt;/code&gt; and &lt;code&gt;tools.deps&lt;/code&gt;; it&amp;rsquo;s very flexible and I find the API intuitive.&lt;/p&gt;
+&lt;h3 id=&#34;creating-the-build-runner&#34;&gt;Creating the build runner&lt;/h3&gt;
+&lt;p&gt;In my project&amp;rsquo;s working directory I create a &lt;code&gt;deps.edn&lt;/code&gt; file.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ touch deps.edn
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and add the Badigeon dependency to the &lt;code&gt;deps.edn&lt;/code&gt; file.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-edn&#34;&gt;{:deps 
+  {}
+  :aliases
+  {:build
+  {:extra-paths [&amp;quot;build&amp;quot;]
+   :extra-deps
+   {badigeon/badigeon
+    {:git/url &amp;quot;https://github.com/EwenG/badigeon.git&amp;quot;
+     :sha &amp;quot;1edf7ae465db870ec0066f28226edb9b04873b70&amp;quot;
+     :tag &amp;quot;0.0.11&amp;quot;}}}}}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Apart from the Clojure system and user dependencies this is the only dependency I&amp;rsquo;ll need in that file.&lt;/p&gt;
+&lt;p&gt;Also, for later use, I create a directory called &lt;code&gt;build&lt;/code&gt; to contain the Clojure files to run the bundling, compilation and assembling processes.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ mkdir build
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;building-the-front-end-js-file&#34;&gt;Building the Front-End JS File&lt;/h3&gt;
+&lt;p&gt;As outlined in my previous 
+&lt;a href=&#34;https://heykieran.github.io/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;blog post&lt;/a&gt;, the following command will build the front-end production application&amp;rsquo;s &lt;code&gt;js&lt;/code&gt; file from the ClojureScript sources for the application being &lt;em&gt;dockerized&lt;/em&gt;.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ cd target-app
+$ clj -A:prod
+$ cd ..
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This will build the application&amp;rsquo;s front-end only and place the production &lt;code&gt;js&lt;/code&gt; file (&lt;code&gt;prod-main.js&lt;/code&gt;) in the &lt;code&gt;target-app/target/public/cljs-out&lt;/code&gt; directory. This is the &lt;strong&gt;only&lt;/strong&gt; change that will be made to the directories and files under &lt;code&gt;target-app&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;At a later stage I will move this file to its correct location under my project directory (&lt;code&gt;./clj-deploy-docker&lt;/code&gt;) so that it can be included in the docker image.&lt;/p&gt;
+&lt;h3 id=&#34;building-the-back-end-jvm-class-files&#34;&gt;Building the Back-End (JVM) Class Files&lt;/h3&gt;
+&lt;p&gt;I&amp;rsquo;ll now &lt;code&gt;cd&lt;/code&gt; into the &lt;code&gt;build&lt;/code&gt; directory I created previously and create a &lt;code&gt;package.clj&lt;/code&gt; file. This file will contain the &lt;code&gt;-main&lt;/code&gt; method that ultimately performs the bundling, compilation and consolidation of the back-end Clojure files i.e. the JVM class files.&lt;/p&gt;
+&lt;h4 id=&#34;some-background-on-bundling-compilation-and-consolidation-_jaring_&#34;&gt;Some Background on Bundling, Compilation and Consolidation (&lt;em&gt;&lt;strong&gt;Jar&lt;/strong&gt;&amp;lsquo;ing&lt;/em&gt;)&lt;/h4&gt;
+&lt;p&gt;There are three distinct phases to assembling the JVM artifacts to include in the docker image and I will be using the Badigeon API to perform all three phases.&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;h5 id=&#34;bundling&#34;&gt;Bundling&lt;/h5&gt;
+&lt;p&gt;The &lt;em&gt;bundling&lt;/em&gt; step creates a &amp;ldquo;bundle&amp;rdquo; at a specified file-system location of all the target project&amp;rsquo;s resources and dependencies, including any &lt;code&gt;jar&lt;/code&gt; files that are needed. Note that because the Badigeon bundler does not merge in the system and user &lt;code&gt;deps&lt;/code&gt; preferences, it will not automatically copy sources that are in &lt;code&gt;src&lt;/code&gt; directory of your project, &lt;strong&gt;unless&lt;/strong&gt; that directory is explicitly specified in the &lt;code&gt;:paths&lt;/code&gt; or &lt;code&gt;:extra-paths&lt;/code&gt; entries in the &lt;code&gt;deps.edn&lt;/code&gt; file. During the bundling phase all the &lt;code&gt;jar&lt;/code&gt; files required by your application, and all other resources on the classpath such as static html file, css files, user authored js files etc. will be copied to the specified target directory.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;h5 id=&#34;compilation&#34;&gt;Compilation&lt;/h5&gt;
+&lt;p&gt;During the &lt;em&gt;compilation&lt;/em&gt; step the compiled versions of your Clojure source files (as &lt;code&gt;.class&lt;/code&gt; files) are generated and copied to a specified target directory.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;h5 id=&#34;consolidation&#34;&gt;Consolidation&lt;/h5&gt;
+&lt;p&gt;The final phase involves creating a &lt;code&gt;jar&lt;/code&gt; file containing all the &lt;code&gt;.class&lt;/code&gt; files needed by the application with an appropriate manifest file (&lt;code&gt;META-INF/MANIFEST.MF&lt;/code&gt;) which has an entry indicating the application&amp;rsquo;s entry-point (a &lt;code&gt;Main-Class&lt;/code&gt; entry), and an entry specifying the libraries to be used by the &lt;code&gt;jar&lt;/code&gt; file (a &lt;code&gt;Class-Path&lt;/code&gt; entry).&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Dependencies (found by Badigeon using the &lt;code&gt;:deps&lt;/code&gt; and &lt;code&gt;:extra-deps&lt;/code&gt; coordinates) will &lt;strong&gt;not&lt;/strong&gt; be incorporated into this &lt;code&gt;jar&lt;/code&gt; file. They will however be added to a &lt;code&gt;./lib&lt;/code&gt; directory as individual &lt;code&gt;jar&lt;/code&gt; files and referenced by the &lt;code&gt;Class-Path&lt;/code&gt; entry in the jar&amp;rsquo;s manifest file.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Once these three phases are complete, &lt;strong&gt;and&lt;/strong&gt; the js file containing the front-end application is placed in its correct location, the application can be run using the &lt;code&gt;java&lt;/code&gt; command line tool.&lt;/p&gt;
+&lt;p&gt;I&amp;rsquo;ll come to that presently, but first I&amp;rsquo;d like to take a slightly deeper look at the &lt;em&gt;bundling&lt;/em&gt;, &lt;em&gt;compilation&lt;/em&gt; and &lt;em&gt;consolidation&lt;/em&gt; phases. The full details are available in the &lt;code&gt;package.clj&lt;/code&gt; file from which the following code snippets have been extracted.&lt;/p&gt;
+&lt;h4 id=&#34;notes-on-the-code-performing-the-three-steps&#34;&gt;Notes on the code performing the three steps&lt;/h4&gt;
+&lt;p&gt;First, I &lt;strong&gt;bundle&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(bundle
+     out-path
+     {:deps-map translated-deps-map
+      :aliases aliases
+      :libs-path &amp;quot;lib&amp;quot;})
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Given a &lt;code&gt;deps-map&lt;/code&gt; and a vector of aliases (&lt;code&gt;[:main]&lt;/code&gt;) this function will copy the projects&amp;rsquo;s resources needed to &lt;code&gt;out-path&lt;/code&gt;, and also copy the &lt;code&gt;jar&lt;/code&gt; files required to &lt;code&gt;out-path/lib&lt;/code&gt;. Because the code I want to bundle is in the &lt;code&gt;target-app&lt;/code&gt; directory, I&amp;rsquo;ll read the &lt;code&gt;deps.edn&lt;/code&gt; file from its location under &lt;code&gt;target-app&lt;/code&gt; and update the &lt;code&gt;:path&lt;/code&gt; and &lt;code&gt;:extra-paths&lt;/code&gt; entries so that they are now relative to the current working directory rather than &lt;code&gt;target-app&lt;/code&gt; (see 
+&lt;a href=&#34;#background-challenges--tools&#34;&gt;above&lt;/a&gt;).&lt;/p&gt;
+&lt;p&gt;Now the &lt;strong&gt;compilation&lt;/strong&gt; phase runs:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(compile/compile
+     &#39;main.core
+     {:compile-path
+      classes-path
+      :classpath
+      (translate-path-to-absolute
+       target-dir
+       deps-map
+       aliases)})
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This compiles the &lt;code&gt;main.core&lt;/code&gt; namespace, putting the &lt;code&gt;.class&lt;/code&gt; files into the directory specified by the &lt;code&gt;classes-path&lt;/code&gt; directory, using a classpath specified by the value of the &lt;code&gt;:classpath&lt;/code&gt; entry. In my case, this is generated by reading the &lt;code&gt;target-app/deps.edn&lt;/code&gt; file into &lt;code&gt;deps-map&lt;/code&gt; and converting the relative components of &lt;code&gt;:paths&lt;/code&gt; and &lt;code&gt;:extra-paths&lt;/code&gt; vectors to absolute file-system locations.&lt;/p&gt;
+&lt;p&gt;Finally, the &lt;strong&gt;consolidation&lt;/strong&gt; phase runs:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(spit manifest-path
+          (jar/make-manifest
+           &#39;main.core
+           {:Class-Path
+            (str
+             &amp;quot;. &amp;quot;
+             (str/join
+              &amp;quot; &amp;quot;
+              (mapv
+               #(str &amp;quot;lib/&amp;quot; (.getName %))
+               (.listFiles (io/file &amp;quot;target/app/lib&amp;quot;)))))}))
+    
+    (zip/zip
+     classes-path
+     (str (make-path out-path &amp;quot;app-runner&amp;quot;) &amp;quot;.jar&amp;quot;))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This achieves two things:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;It creates a manifest file in &lt;code&gt;target/app/classes/META-INF&lt;/code&gt;, setting &lt;code&gt;main.core&lt;/code&gt; as the entry point, and adds entries for all the &lt;code&gt;jar&lt;/code&gt; files in the &lt;code&gt;target/lib&lt;/code&gt; directory (which was created and populated during &lt;em&gt;bundling&lt;/em&gt;) into the manifest file&amp;rsquo;s &lt;code&gt;Class-Path&lt;/code&gt; header field. In order for the application to run there is an assumption that the final &lt;code&gt;jar&lt;/code&gt; file and the &lt;code&gt;lib&lt;/code&gt; directory will exist at the same level in the file system i.e. in the same directory.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;It creates a &lt;code&gt;app-runner.jar&lt;/code&gt; file from the contents of the &lt;code&gt;target/app/classes&lt;/code&gt; directory. This &lt;code&gt;jar&lt;/code&gt; file &lt;strong&gt;is&lt;/strong&gt; the main application and will contain the manifest file just created with its &lt;code&gt;Class-Path&lt;/code&gt; entry pointing to the non-application &lt;code&gt;jar&lt;/code&gt; files it needs to run - i.e. those found in the &lt;code&gt;lib&lt;/code&gt; directory.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;In order to run all three steps, I can &amp;ldquo;execute&amp;rdquo; the &lt;code&gt;package&lt;/code&gt; namespace passing the &lt;code&gt;target-app&lt;/code&gt; directory name as an argument.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ clj -A:build -m package &amp;quot;target-app&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This completes the Bundling, Compilation and Consolidation steps, and when it finishes I will have a directory structure, which with the addition of the front-end &lt;code&gt;js&lt;/code&gt; file (which I compiled above) will constitute the complete application.&lt;/p&gt;
+&lt;p&gt;I can copy the &lt;code&gt;js&lt;/code&gt; file to its correct location using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ mkdir -p target/app/public/cljs-out &amp;amp;&amp;amp; \ 
+  cp target-app/target/public/cljs-out/prod-main.js &amp;quot;$_&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now, everything I need (and some I don&amp;rsquo;t) is available in the &lt;code&gt;./target/app/&lt;/code&gt; directory.&lt;/p&gt;
+&lt;h4 id=&#34;running-the-application&#34;&gt;Running the Application&lt;/h4&gt;
+&lt;p&gt;Before running the compiled application I need to ensure that certain environment variables are defined and set correctly.&lt;/p&gt;
+&lt;p&gt;As discussed in my 
+&lt;a href=&#34;https://heykieran.github.io/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;previous post&lt;/a&gt;, the application requires a number of environment variables to be set in order to configure itself correctly.&lt;/p&gt;
+&lt;p&gt;These are&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;# the https port number used by the Pedestal API server
+ALLOC_SSL_PORT=8081 
+# the password of Jetty&#39;s keystore 
+ALLOC_KEYSTORE_PASSWORD=&amp;lt;password&amp;gt; 
+# the http port number used by the Pedestal API server
+ALLOC_PORT=8080 
+# the file system location of the Jetty&#39;s keystore (as an absolute file path)
+ALLOC_KEYSTORE_LOCATION=&amp;lt;location&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I can &lt;code&gt;cd&lt;/code&gt; into the built artifact&amp;rsquo;s directory (&lt;code&gt;./target/app&lt;/code&gt;) and run the backend application directly from the &lt;code&gt;jar&lt;/code&gt; file&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ cd target/app
+$ java -jar app-runner.jar
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;or, because the classes still exist in a &lt;code&gt;classes&lt;/code&gt; directory under the &lt;code&gt;app&lt;/code&gt; directory&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ cd target/app
+$ java -cp .:classes:lib/* main.core
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The app will start, and when it&amp;rsquo;s fully initialized, I can navigate to 
+&lt;a href=&#34;https://localhost:8081/r/home&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;&lt;code&gt;https://localhost:8081/r/home&lt;/code&gt;&lt;/a&gt; to see it in action.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;There is also a lot of unnecessary &amp;ldquo;residue&amp;rdquo; in the &lt;code&gt;./target/app&lt;/code&gt; directory, created during &lt;em&gt;bundling&lt;/em&gt;, including directories containing clj and cljc files that are not actually needed to run the application (they will already have been compiled into the &lt;code&gt;classes&lt;/code&gt; directory).&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;When I process the files for deployment to docker, these will be removed.&lt;/p&gt;
+&lt;p&gt;There remains then only the task of creating the docker image itself, which is outlined below.&lt;/p&gt;
+&lt;h2 id=&#34;create-the-docker-image&#34;&gt;Create the Docker Image&lt;/h2&gt;
+&lt;p&gt;The docker image I will use is very simple - a basic Debian stretch image with a Java8 SDK.&lt;/p&gt;
+&lt;p&gt;In my project directory I create a directory called &lt;code&gt;docker&lt;/code&gt; and &lt;code&gt;cd&lt;/code&gt; into it.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ mkdir docker
+$ cd docker 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and create a &lt;code&gt;Dockerfile&lt;/code&gt; containing&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-Dockerfile&#34;&gt;FROM openjdk:8-stretch
+
+COPY entrypoint.sh /sbin/entrypoint.sh
+RUN chmod 755 /sbin/entrypoint.sh
+
+EXPOSE 8081/tcp
+
+COPY deploy /image
+
+WORKDIR /image/app
+
+ENV ALLOC_KEYSTORE_LOCATION=/image/local/jetty-keystore \
+    ALLOC_KEYSTORE_PASSWORD=password \
+    ALLOC_PORT=8080 \
+    ALLOC_SSL_PORT=8081 
+
+ENTRYPOINT [&amp;quot;/sbin/entrypoint.sh&amp;quot;]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;Dockerfile&lt;/code&gt; as defined will&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;create an image from a base &lt;code&gt;openjdk:8-stretch&lt;/code&gt; image,&lt;/li&gt;
+&lt;li&gt;copy the file &lt;code&gt;entrypoint.sh&lt;/code&gt; (which I haven&amp;rsquo;t created yet) from the &lt;code&gt;docker/deploy&lt;/code&gt; folder to the image&amp;rsquo;s &lt;code&gt;/sbin&lt;/code&gt; directory and set its mode to executable,&lt;/li&gt;
+&lt;li&gt;enable network connectivity to port &lt;code&gt;8081&lt;/code&gt; only (there will be &lt;em&gt;no&lt;/em&gt; access to the unprotected &lt;code&gt;http&lt;/code&gt; port 8080),&lt;/li&gt;
+&lt;li&gt;copy the entire contents of the &lt;code&gt;docker/deploy&lt;/code&gt; directory to the image&amp;rsquo;s &lt;code&gt;/image&lt;/code&gt; directory,&lt;/li&gt;
+&lt;li&gt;set the image&amp;rsquo;s working directory to &lt;code&gt;/image/app&lt;/code&gt;,&lt;/li&gt;
+&lt;li&gt;set the needed environment variables for the new image, and&lt;/li&gt;
+&lt;li&gt;specify that the &lt;code&gt;/sbin/entrypoint.sh&lt;/code&gt; script should be run when the container starts.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The &lt;code&gt;deploy&lt;/code&gt; directory under the &lt;code&gt;docker&lt;/code&gt; directory is the location where the application&amp;rsquo;s artifact will be assembled before their inclusion in the image when the &lt;code&gt;COPY deploy /image&lt;/code&gt; command is run.&lt;/p&gt;
+&lt;p&gt;From my project&amp;rsquo;s folder (&lt;code&gt;clj-deploy-docker&lt;/code&gt;) I run the following command to copy the entire app (including residue) to the &lt;code&gt;docker/deploy&lt;/code&gt; folder (creating it if it doesn&amp;rsquo;t exist).&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ mkdir -p docker/deploy/app &amp;amp;&amp;amp; cp -r target/app/* &amp;quot;$_&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now, in order to remove the extraneous files I can run&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ 	find docker/deploy/app -maxdepth 1 -mindepth 1 -type d \( ! \( -name &#39;lib&#39; -o -name &#39;public&#39; \) \) -exec rm -rf {} \;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This deletes any sub-directory in the &lt;code&gt;docker/deploy&lt;/code&gt; folder &lt;strong&gt;not&lt;/strong&gt; named &lt;code&gt;lib&lt;/code&gt; (which contain the &lt;code&gt;jar&lt;/code&gt; files the application needs) or &lt;code&gt;public&lt;/code&gt; (which contains all the non-JVM resources the application needs).&lt;/p&gt;
+&lt;p&gt;I now add the &lt;code&gt;entrypoint.sh&lt;/code&gt; file to the &lt;code&gt;docker/deploy&lt;/code&gt; folder. This script, which is run when the image is started, simply calls the application&amp;rsquo;s entry-point.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-Shell&#34;&gt;#!/bin/bash
+# exit immediately if error
+set -e
+
+java -jar app-runner.jar
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Finally, I need to ensure that the keystore used to encrypt the application&amp;rsquo;s &lt;code&gt;https&lt;/code&gt; communication is available for the image build process, so I copy it from my local file system&amp;rsquo;s location to the &lt;code&gt;/docker/deploy/local&lt;/code&gt; directory, from whence, during the image building process, it will be copied to the image&amp;rsquo;s &lt;code&gt;/image/local&lt;/code&gt; folder.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;# mkdir -p docker/deploy/local &amp;amp;&amp;amp; cp &amp;lt;location-of-keystore&amp;gt; &amp;quot;$_&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now, with everything cleaned-up and with the script and the keystore in place, I can create the application&amp;rsquo;s docker image, tagging it with the label &lt;code&gt;testapp:dev&lt;/code&gt;.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ docker build -t testapp:dev docker
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and then run a container based on that image using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ docker run --rm --name test 
+    --env ALLOC_KEYSTORE_PASSWORD=&amp;lt;the-real-keystore-password&amp;gt; 
+    -p:8081:8081 
+    -it testapp:dev
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I can then open my browser to 
+&lt;a href=&#34;https://localhost:8081/r/home&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;&lt;code&gt;https://localhost:8081/r/home&lt;/code&gt;&lt;/a&gt; in order to confirm it&amp;rsquo;s running correctly.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;
+When I created the image I did not include the correct password for the keystore in the Dockerfile. Therefore, in order for the application to work correctly I&amp;rsquo;m required to pass the correct value by setting the env variable &lt;code&gt;ALLOC_KEYSTORE_PASSWORD&lt;/code&gt; when I start the container. It will be used in lieu of the value embedded in the image.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;docker-secrets&#34;&gt;Docker Secrets&lt;/h2&gt;
+&lt;p&gt;Passing sensitive information using environment variables is satisfactory in many situations, but there is available a better approach: &lt;strong&gt;docker secrets&lt;/strong&gt;.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;
+Docker secrets are &lt;strong&gt;not&lt;/strong&gt; available in stand-alone mode, the feature is only available in &lt;strong&gt;swarm&lt;/strong&gt; mode.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;passing-configuration-values&#34;&gt;Passing Configuration Values&lt;/h3&gt;
+&lt;p&gt;For further details on the subject of passing configurations to a Clojure application you can refer to my 
+&lt;a href=&#34;https://heykieran.github.io/post/clojure-configuration/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;blog post&lt;/a&gt; on the subject. The post also discusses more fully the mechanics of how the configuration is used by the application&amp;rsquo;s code.&lt;/p&gt;
+&lt;h3 id=&#34;create-a-swarm&#34;&gt;Create a swarm&lt;/h3&gt;
+&lt;p&gt;To create a local swarm for testing I can issue the following command&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ docker swarm init
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Once the swarm has been initialized I can add a secret to the registry. Let&amp;rsquo;s suppose I want to protect the &lt;code&gt;ALLOC_KEYSTORE_PASSWORD&lt;/code&gt; and avoid having to pass it to the image as an environment variable. I can simply create a docker secret to hold the value, protecting it from being stolen too easily. The following command will create a secret called &lt;code&gt;ALLOC_KEYSTORE_PASSWORD&lt;/code&gt;, set its value to &lt;code&gt;MYKEYSTOREPASSWORD&lt;/code&gt; and store it in the swarm&amp;rsquo;s registry.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ printf &amp;quot;MYKEYSTOREPASSWORD&amp;quot; | docker secret create ALLOC_KEYSTORE_PASSWORD -
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You can test that the secret was successfully created by issuing&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ docker secret ls
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In order to use the secret, the container has to be started as a service within the swarm, and on the command line must be specified to what secrets the service has access. In order to start the container with access to the &lt;code&gt;ALLOC_KEYSTORE_PASSWORD&lt;/code&gt; and linking swarm&amp;rsquo;s network to the host&amp;rsquo;s network I can issue the following command&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ docker service create --replicas 1 \
+    --secret ALLOC_KEYSTORE_PASSWORD \ 
+    --name testapp \
+    --publish mode=host,published=8081,target=8081 \
+    testapp:dev
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This will start the service (named &lt;code&gt;testapp&lt;/code&gt;) within the swarm, and the service will start serving the application similarly to when I used the &lt;code&gt;docker run&lt;/code&gt; command above.&lt;/p&gt;
+&lt;p&gt;Once started the following command will return basic information about the service&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ docker service ls
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and this information should look something like the following&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;ID                  NAME                MODE                REPLICAS            IMAGE               PORTS
+kjzh1uc2ttng        testapp             replicated          1/1                 testapp:dev         
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If I want to monitor the activity of the service I should monitor the &lt;strong&gt;logs&lt;/strong&gt; of its associated container and, in order to do this I need to know the container&amp;rsquo;s ID.&lt;/p&gt;
+&lt;p&gt;I can issue the following command and note the value in the &lt;code&gt;CONTAINER_ID&lt;/code&gt; column for the image &lt;code&gt;testapp:dev&lt;/code&gt; and use it to interrogate the logs.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ docker container ls
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This will return something like the following:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-Shell&#34;&gt;CONTAINER ID        IMAGE               COMMAND                 CREATED             STATUS              PORTS                    NAMES
+d5b269d508b4        testapp:dev         &amp;quot;/sbin/entrypoint.sh&amp;quot;   15 seconds ago      Up 14 seconds       0.0.0.0:8081-&amp;gt;8081/tcp   testapp.1.tb4n70oe1t8tz3qdzo2aawmek
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And I can view the logs of the running container using as much of the container&amp;rsquo;s ID as necessary to make it unique&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ docker logs d5b
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This allows me to confirm that the application started correctly and is responding to requests.&lt;/p&gt;
+&lt;p&gt;As before, I can point my browser at 
+&lt;a href=&#34;https://localhost:8081/r/home&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;&lt;code&gt;https://localhost:8081/r/home&lt;/code&gt;&lt;/a&gt; and exercise the packaged application running as a docker service.&lt;/p&gt;
+&lt;p&gt;After some activity I can review the history of my interactions (and the server&amp;rsquo;s responses) by once again reviewing the logs:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ docker logs d5
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To shutdown the service, I run&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ docker service rm testapp
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;review&#34;&gt;Review&lt;/h2&gt;
+&lt;p&gt;There were quite a number of steps but I hope the detail was illuminative. The repository also contains a Makefile that streamlines building the application and the docker image easier.&lt;/p&gt;
+&lt;p&gt;The following targets are defined:&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;clean-all&lt;/code&gt; - cleans out all compilation and build artifacts&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;clean-build&lt;/code&gt; - deletes the ClojureScript and JVM build artifacts. Does not remove any docker build artifacts.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;clean-deploy&lt;/code&gt; - deletes the docker build artifacts in &lt;code&gt;./docker/deploy&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;build&lt;/code&gt; - build the ClojureScript production &lt;code&gt;js&lt;/code&gt; file, and the JVM &lt;code&gt;.classes&lt;/code&gt; files&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;docker&lt;/code&gt; - builds the docker image&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;docker/deploy&lt;/code&gt; - assembles all the artifacts needed to build the docker image to the &lt;code&gt;docker/deploy&lt;/code&gt; directory, and cleans out any unnecessary files and directories&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;run-local&lt;/code&gt; - using the &lt;code&gt;java&lt;/code&gt; command runs the application from the application jar in the &lt;code&gt;docker/deploy&lt;/code&gt; directory.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Clojure Configurations with Docker Secrets</title>
