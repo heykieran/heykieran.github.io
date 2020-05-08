@@ -626,7 +626,7 @@
       <h2 id="introduction">Introduction</h2>
 <p>In this post I&rsquo;ll show how to build and deploy to docker a fully-functioning application comprising a secure Pedestal API web-server and a React front-end application written in ClojureScript which accesses the server.</p>
 <p>For this example I&rsquo;ll be using the Pedestal/React application I previously discussed in this 
-<a href="https://heykieran.github.io/" target="_blank" rel="noopener">blog post</a> (with its code 
+<a href="https://heykieran.github.io/post/pedestal-and-google/" target="_blank" rel="noopener">blog post</a> (with its code 
 <a href="https://https://github.com/heykieran/clj-pedestal-google" target="_blank" rel="noopener">here</a>).</p>
 <h2 id="outline-of-the-steps">Outline of the Steps</h2>
 <p>I&rsquo;ll set up a working directory for the build, clone the target application into a sub-directory, compile the target, package it and its dependencies to java byte code, assemble them into a jar, create a docker image for the application, and deploy it as a docker service.</p>
@@ -702,7 +702,7 @@ $ cd clj-deploy-docker
 </code></pre>
 <h3 id="building-the-front-end-js-file">Building the Front-End JS File</h3>
 <p>As outlined in my previous 
-<a href="https://heykieran.github.io/" target="_blank" rel="noopener">blog post</a>, the following command will build the front-end production application&rsquo;s <code>js</code> file from the ClojureScript sources for the application being <em>dockerized</em>.</p>
+<a href="https://heykieran.github.io/post/pedestal-and-google/" target="_blank" rel="noopener">blog post</a>, the following command will build the front-end production application&rsquo;s <code>js</code> file from the ClojureScript sources for the application being <em>dockerized</em>.</p>
 <pre><code>$ cd target-app
 $ clj -A:prod
 $ cd ..
@@ -792,7 +792,7 @@ $ cd ..
 <h4 id="running-the-application">Running the Application</h4>
 <p>Before running the compiled application I need to ensure that certain environment variables are defined and set correctly.</p>
 <p>As discussed in my 
-<a href="https://heykieran.github.io/" target="_blank" rel="noopener">previous post</a>, the application requires a number of environment variables to be set in order to configure itself correctly.</p>
+<a href="https://heykieran.github.io/post/pedestal-and-google/" target="_blank" rel="noopener">previous post</a>, the application requires a number of environment variables to be set in order to configure itself correctly.</p>
 <p>These are</p>
 <pre><code># the https port number used by the Pedestal API server
 ALLOC_SSL_PORT=8081 

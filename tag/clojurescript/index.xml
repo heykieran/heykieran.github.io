@@ -20,7 +20,7 @@
       <description>&lt;h2 id=&#34;introduction&#34;&gt;Introduction&lt;/h2&gt;
 &lt;p&gt;In this post I&amp;rsquo;ll show how to build and deploy to docker a fully-functioning application comprising a secure Pedestal API web-server and a React front-end application written in ClojureScript which accesses the server.&lt;/p&gt;
 &lt;p&gt;For this example I&amp;rsquo;ll be using the Pedestal/React application I previously discussed in this 
-&lt;a href=&#34;https://heykieran.github.io/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;blog post&lt;/a&gt; (with its code 
+&lt;a href=&#34;https://heykieran.github.io/post/pedestal-and-google/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;blog post&lt;/a&gt; (with its code 
 &lt;a href=&#34;https://https://github.com/heykieran/clj-pedestal-google&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;here&lt;/a&gt;).&lt;/p&gt;
 &lt;h2 id=&#34;outline-of-the-steps&#34;&gt;Outline of the Steps&lt;/h2&gt;
 &lt;p&gt;I&amp;rsquo;ll set up a working directory for the build, clone the target application into a sub-directory, compile the target, package it and its dependencies to java byte code, assemble them into a jar, create a docker image for the application, and deploy it as a docker service.&lt;/p&gt;
@@ -96,7 +96,7 @@ $ cd clj-deploy-docker
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h3 id=&#34;building-the-front-end-js-file&#34;&gt;Building the Front-End JS File&lt;/h3&gt;
 &lt;p&gt;As outlined in my previous 
-&lt;a href=&#34;https://heykieran.github.io/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;blog post&lt;/a&gt;, the following command will build the front-end production application&amp;rsquo;s &lt;code&gt;js&lt;/code&gt; file from the ClojureScript sources for the application being &lt;em&gt;dockerized&lt;/em&gt;.&lt;/p&gt;
+&lt;a href=&#34;https://heykieran.github.io/post/pedestal-and-google/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;blog post&lt;/a&gt;, the following command will build the front-end production application&amp;rsquo;s &lt;code&gt;js&lt;/code&gt; file from the ClojureScript sources for the application being &lt;em&gt;dockerized&lt;/em&gt;.&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;$ cd target-app
 $ clj -A:prod
 $ cd ..
@@ -186,7 +186,7 @@ $ cd ..
 &lt;h4 id=&#34;running-the-application&#34;&gt;Running the Application&lt;/h4&gt;
 &lt;p&gt;Before running the compiled application I need to ensure that certain environment variables are defined and set correctly.&lt;/p&gt;
 &lt;p&gt;As discussed in my 
-&lt;a href=&#34;https://heykieran.github.io/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;previous post&lt;/a&gt;, the application requires a number of environment variables to be set in order to configure itself correctly.&lt;/p&gt;
+&lt;a href=&#34;https://heykieran.github.io/post/pedestal-and-google/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;previous post&lt;/a&gt;, the application requires a number of environment variables to be set in order to configure itself correctly.&lt;/p&gt;
 &lt;p&gt;These are&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;# the https port number used by the Pedestal API server
 ALLOC_SSL_PORT=8081 
