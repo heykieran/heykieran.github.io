@@ -5,12 +5,291 @@
     <link>https://heykieran.github.io/post/</link>
       <atom:link href="https://heykieran.github.io/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Thu, 07 May 2020 12:10:26 -0400</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Thu, 28 May 2020 05:49:44 -0400</lastBuildDate>
     <image>
       <url>https://heykieran.github.io/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_2.png</url>
       <title>Posts</title>
       <link>https://heykieran.github.io/post/</link>
     </image>
+    
+    <item>
+      <title>Deploy a Clojure Web Application to Kubernetes (GKE)</title>
+      <link>https://heykieran.github.io/post/deploy-to-kubernetes-gke/</link>
+      <pubDate>Thu, 28 May 2020 05:49:44 -0400</pubDate>
+      <guid>https://heykieran.github.io/post/deploy-to-kubernetes-gke/</guid>
+      <description>&lt;h1 id=&#34;introduction&#34;&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;In a previous blog post I showed how it was possible to take a Clojure project containing a Pedestal &lt;em&gt;back-end&lt;/em&gt; and a React &lt;em&gt;front-end&lt;/em&gt;, and package it as a Docker container which can be run as a standalone Docker image using &lt;code&gt;docker run&lt;/code&gt;, or as part of a Docker Swarm using &lt;code&gt;docker service&lt;/code&gt;. In this post, I will show how it is possible to deploy the same Docker container to a Kubernetes Cluster and to make the application available at a particular URL of your choosing.&lt;/p&gt;
+&lt;h1 id=&#34;summary-of-the-steps&#34;&gt;Summary of the steps&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;Create a GCP Project&lt;/li&gt;
+&lt;li&gt;Build and Tag your Docker image&lt;/li&gt;
+&lt;li&gt;Upload your image to the Google Registry&lt;/li&gt;
+&lt;li&gt;Create a GKE Cluster&lt;/li&gt;
+&lt;li&gt;Get a Google Static IP address&lt;/li&gt;
+&lt;li&gt;Create an A record in your DNS for the IP endpoint&lt;/li&gt;
+&lt;li&gt;Create a Google managed SSL certificate&lt;/li&gt;
+&lt;li&gt;Deploy your image to the cluster&lt;/li&gt;
+&lt;li&gt;Create a back-end service over your container&lt;/li&gt;
+&lt;li&gt;Create an Ingress front-end service connecting the external IP address to the back-end service over https&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id=&#34;the-steps&#34;&gt;The Steps&lt;/h1&gt;
+&lt;h2 id=&#34;setting-up-a-cloud-project-on-gcp&#34;&gt;Setting up a Cloud Project on GCP&lt;/h2&gt;
+&lt;p&gt;Before you start, you&amp;rsquo;ll need to create a Google Cloud Project. This is a simple process, so I won&amp;rsquo;t go into the details as instructions can be found 
+&lt;a href=&#34;https://cloud.google.com/resource-manager/docs/creating-managing-projects&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;The current demo assumes that the project name is &lt;code&gt;clojure-app-v1&lt;/code&gt;, that a Docker daemon is running locally, and that the &lt;code&gt;docker&lt;/code&gt; binary is on your path. Also, the URL at which the application is published is chosen to be &lt;code&gt;https://demo.timpsongray.com&lt;/code&gt;. Obviously, this will be different for you.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;You should also install both the &lt;code&gt;gcloud&lt;/code&gt; and &lt;code&gt;kubectl&lt;/code&gt; command line tools locally. If this is your first GCP project, don&amp;rsquo;t forget to also initialize the Cloud SDK. This will set your account&amp;rsquo;s credentials, authorize access to GCP API&amp;rsquo;s, and establish a base configuration, such as your default compute region and zone.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;a href=&#34;https://cloud.google.com/sdk/install&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Installing &lt;code&gt;gcloud&lt;/code&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;a href=&#34;https://cloud.google.com/sdk/docs/initializing&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Initializing the SDK&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Once you have installed &lt;code&gt;gcloud&lt;/code&gt; locally, installing &lt;code&gt;kubectl&lt;/code&gt; is simply a matter of running&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud components install kubectl
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;from the command line.&lt;/p&gt;
+&lt;p&gt;Finally, with the tools installed and your project created, you can view its details using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud projects describe clojure-app-v1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;setting-your-current-project&#34;&gt;Setting your Current Project&lt;/h3&gt;
+&lt;p&gt;Now, you should set &lt;code&gt;clojure-app-v1&lt;/code&gt; to be the &lt;em&gt;current&lt;/em&gt; project. (If you&amp;rsquo;ve run &lt;code&gt;gcloud init&lt;/code&gt; as above, this should already have been done, but it&amp;rsquo;s no harm to &lt;em&gt;set&lt;/em&gt; it a second time.)&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud config set project clojure-app-v1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;connecting-you-docker-repository-to-gcp&#34;&gt;Connecting you Docker Repository to GCP&lt;/h3&gt;
+&lt;p&gt;In order to easily publish a docker image from your local machine to a GCP container registry you should configure docker to use &lt;code&gt;gcloud&lt;/code&gt; as the credential helper for all Google&amp;rsquo;s registries using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud auth configure-docker
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;build-and-tag-the-docker-image&#34;&gt;Build and Tag the docker image&lt;/h2&gt;
+&lt;h3 id=&#34;build-the-docker-image&#34;&gt;Build the docker image&lt;/h3&gt;
+&lt;p&gt;If your using the repo, you can do this by issuing&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ make clean-all
+$ make docker
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;from the command line.&lt;/p&gt;
+&lt;h3 id=&#34;tag-the-image-for-upload-to-the-google-container-registry&#34;&gt;Tag the image for upload to the Google container registry&lt;/h3&gt;
+&lt;p&gt;Now we&amp;rsquo;ll tag the image so it conforms with the image names expected by the Google registry.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ docker tag clojure-app-v1 gcr.io/clojure-app-v1/clojure-app-v1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;By default, the above command adds &lt;code&gt;:latest&lt;/code&gt; to the end of the tag.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;The Google registry location is constructed using &lt;code&gt;gcr.io/&amp;lt;PROJECT_NAME&amp;gt;/&amp;lt;IMAGE_NAME&amp;gt;.&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;In the current situation the &lt;code&gt;PROJECT_ID&lt;/code&gt; and the &lt;code&gt;IMAGE_NAME&lt;/code&gt; are the same, but this does not always have to be the case.&lt;/p&gt;
+&lt;h2 id=&#34;push-the-image-to-the-google-registry&#34;&gt;Push the image to the Google Registry&lt;/h2&gt;
+&lt;p&gt;Before Google will accept a pushed image you need to enable the &lt;strong&gt;Google Container Registry API&lt;/strong&gt; for your project&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud services enable containerregistry.googleapis.com
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and then push the tagged image using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ docker push gcr.io/clojure-app-v1/clojure-app-v1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;create-the-cluster&#34;&gt;Create the Cluster&lt;/h2&gt;
+&lt;p&gt;First enable the &lt;strong&gt;Kubernetes Engine API&lt;/strong&gt; using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud services enable container.googleapis.com
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;which may take a few minutes.&lt;/p&gt;
+&lt;p&gt;When complete, we ask GKE to create a cluster with a single node, which is sufficient for illustrative purposes.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud container clusters create cluster-clojure-app-v1 --num-nodes=1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Again, this may take a few minutes as the cluster&amp;rsquo;s resources are created, deployed and health-checked.&lt;/p&gt;
+&lt;h3 id=&#34;import-credentials&#34;&gt;Import Credentials&lt;/h3&gt;
+&lt;p&gt;Once the cluster has been created we &lt;em&gt;sync&lt;/em&gt; credentials&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud container clusters get-credentials cluster-clojure-app-v1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This will create a &lt;code&gt;kubeconfig&lt;/code&gt; entry for the cluster, and allow you to manage the new cluster using the &lt;code&gt;kubectl&lt;/code&gt; command line tool.&lt;/p&gt;
+&lt;h2 id=&#34;get-a-static-ip-address-for-your-site&#34;&gt;Get a static IP address for your site&lt;/h2&gt;
+&lt;p&gt;We have decided to publish our application at a well-known url (i.e. &lt;code&gt;demo.timpsongray.com&lt;/code&gt;), so we need to ensure that we have a stable, externally addressable IP address. We do this by asking GCP to assign a global IP address for our use.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud compute addresses create clojure-app-v1-addr --global
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;find-the-external-ip-address&#34;&gt;Find the external IP address&lt;/h3&gt;
+&lt;p&gt;Now, find what IP address was assigned using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud compute addresses list
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;which should return something like&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;NAME                 ADDRESS/RANGE   TYPE      PURPOSE  NETWORK  REGION  SUBNET  STATUS
+clojure-app-v1-addr  34.107.182.232  EXTERNAL                                    RESERVED
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Make a note of the IP address, and then add an &lt;strong&gt;A&lt;/strong&gt; record to your DNS associating the name &lt;code&gt;demo.timpsongray.com&lt;/code&gt; with that IP address. You may need to wait a little while for the DNS changes to propogate.&lt;/p&gt;
+&lt;h3 id=&#34;create-a-secret&#34;&gt;Create a Secret&lt;/h3&gt;
+&lt;p&gt;The application uses either environment variables or docker secrets to configure itself. From an internal perspective, this distinction is abstracted away with the use of the &lt;code&gt;walmartlabs/dyn-edn&lt;/code&gt; Clojure library.&lt;/p&gt;
+&lt;p&gt;However, GKE adds a feature to its use of secrets that is not available with docker swarm - it&amp;rsquo;s possible to have a secret&amp;rsquo;s value dynamically injected into a container&amp;rsquo;s environment as a standard environment variable.&lt;/p&gt;
+&lt;p&gt;In order to make use of this, of course, you must create a secret. This can be done as follows. (The value of &lt;code&gt;&amp;lt;THESECRET&amp;gt;&lt;/code&gt; should be the password for the keystore used by the Jetty instance in your application).&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ kubectl create secret generic demo-secrets \
+   --from-literal=ALLOC_KEYSTORE_PASSWORD=&#39;&amp;lt;THESECRET&amp;gt;&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You can check that the secret was created successfully by issuing the following command and inspecting the results&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ kubectl describe secrets/demo-secrets
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;deploy-your-app-to-the-cluster&#34;&gt;Deploy your App to the Cluster&lt;/h2&gt;
+&lt;p&gt;Now deploy the Docker image containing the application to a container running in the cluster specifying the image recently pushed to the Google registry.&lt;/p&gt;
+&lt;p&gt;During the deployment GKE will be requested to inject the value of the &lt;code&gt;ALLOC_KEYSTORE_PASSWORD&lt;/code&gt; from the &lt;code&gt;demo-secrets&lt;/code&gt; resource as an environment variable (also called &lt;code&gt;ALLOC_KEYSTORE_PASSWORD&lt;/code&gt;) into the container&amp;rsquo;s run-time environment. This variable is used by the Clojure application to gain access to Jetty&amp;rsquo;s keystore, which is required to allow Jetty to publish the application on an &lt;code&gt;https&lt;/code&gt; endpoint.&lt;/p&gt;
+&lt;div class=&#34;alert alert-&#34;&gt;
+  &lt;div&gt;
+    Kubernetes secrets can also be made available within the container at a particular mount point (using &lt;code&gt;tmpfs&lt;/code&gt;). This is similar to Docker swarm&amp;rsquo;s strategy. We could use it here, but the environment variable approach is simpler and the use of the &lt;code&gt;dyn-edn&lt;/code&gt; library ensures that there&amp;rsquo;s very little transition to be done moving from a local development environment and the Kubernetes production environment.
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;p&gt;Now instruct GKE to deploy the application using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ kubectl apply -f deploy.yaml
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;where the contents of the &lt;code&gt;deploy.yaml&lt;/code&gt; file is as follows&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: demo
+  name: demo-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo
+      tier: web
+  template:
+    metadata:
+      labels:
+        app: demo
+        tier: web
+    spec:
+      containers:
+      - image: gcr.io/clojure-app-v1/clojure-app-v1:latest
+        name: demo-app
+        ports:
+        - containerPort: 8081
+        env:
+        - name: ALLOC_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: demo-secrets
+              key: ALLOC_KEYSTORE_PASSWORD
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;create-a-back-end-service&#34;&gt;Create a Back-End Service&lt;/h2&gt;
+&lt;p&gt;To access the deployed application GKE is requested to create a back-end service over the pods containing the deployment. The request will be for a NodePort service, which exposes the Service on the same port of each selected Node in the cluster using NAT. Makes a Service accessible from outside the cluster using &lt;NodeIP&gt;:&lt;NodePort&gt;. Superset of ClusterIP.&lt;/p&gt;
+&lt;p&gt;This is done using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ kubectl apply -f service.yaml
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;where the content of the &lt;code&gt;service.yaml&lt;/code&gt; file is as follows&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;apiVersion: v1
+kind: Service
+metadata:
+  name: demo-svc
+  annotations:
+    cloud.google.com/app-protocols: &#39;{&amp;quot;app-https-port&amp;quot;:&amp;quot;HTTPS&amp;quot;,&amp;quot;app-http-port&amp;quot;:&amp;quot;HTTP&amp;quot;}&#39;
+  labels:
+    app: demo
+spec:
+  type: NodePort
+  selector:
+    app: demo
+    tier: web
+  ports:
+    - name: app-https-port
+      port: 8081
+      targetPort: 8081
+    - name: app-http-port
+      port: 8080
+      targetPort: 8080
+&lt;/code&gt;&lt;/pre&gt;
+&lt;div class=&#34;alert alert-note&#34;&gt;
+  &lt;div&gt;
+    &lt;h5 id=&#34;why-http-_and-other-notes-on-health-checks_&#34;&gt;Why &lt;code&gt;http&lt;/code&gt;? &lt;em&gt;(and other notes on Health Checks)&lt;/em&gt;&lt;/h5&gt;
+&lt;p&gt;GKE will automatically create &lt;em&gt;Health Checks&lt;/em&gt; to check the status of the backend services created, and which expose your deployment.&lt;/p&gt;
+&lt;p&gt;By default, for web services, GKE will probe the app at a particular path (&lt;code&gt;/&lt;/code&gt; or &lt;code&gt;/healthz&lt;/code&gt;) using a particular protocol (&lt;code&gt;http&lt;/code&gt; or &lt;code&gt;https&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;Network load balancers require &lt;em&gt;legacy&lt;/em&gt; health checks. These must be &lt;code&gt;http&lt;/code&gt;, which means that the backend must support &lt;code&gt;http&lt;/code&gt; probing by the health checking mechanisms. Don&amp;rsquo;t disable &lt;code&gt;http&lt;/code&gt; on NodePort service (the backend service) or GKE will complain.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Although &lt;em&gt;Legacy&lt;/em&gt; health checks &lt;em&gt;can&lt;/em&gt; be &lt;code&gt;https&lt;/code&gt;, the Network Load Balancer only supports &lt;code&gt;http&lt;/code&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;h3 id=&#34;check-the-services-status&#34;&gt;Check the Service&amp;rsquo;s Status&lt;/h3&gt;
+&lt;p&gt;A convenient way to check if a web application is running correctly is to use port forwarding from your local machine to tunnel directly to the running pod. You can use the following command to open a tunnel to the node&amp;rsquo;s port 8081 (which is the home port for the &lt;em&gt;containerized&lt;/em&gt; Clojure application) from port 8080 on localhost.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud container clusters get-credentials \ 
+  cluster-clojure-app-v1 --zone us-east4-a --project clojure-app-v1 \
+  &amp;amp;&amp;amp; kubectl port-forward $(kubectl get pod \
+  --selector=&amp;quot;app=demo,tier=web&amp;quot; \
+  --output jsonpath=&#39;{.items[0].metadata.name}&#39;) 8080:8081
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and then in your browser, navigate to &lt;code&gt;https://localhost:8080&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;If everything is operating correctly, you should see the home page of the Clojure application served by Jetty.&lt;/p&gt;
+&lt;p&gt;In your console window type &lt;code&gt;Ctrl+C&lt;/code&gt; to stop port forwarding.&lt;/p&gt;
+&lt;h2 id=&#34;set-up-external-routing&#34;&gt;Set up External Routing&lt;/h2&gt;
+&lt;p&gt;In the following section we will connect our chosen URL &lt;code&gt;demo.timpsongray.com&lt;/code&gt; to the application.&lt;/p&gt;
+&lt;p&gt;But first we&amp;rsquo;ll need to perform a few checks and actions.&lt;/p&gt;
+&lt;h3 id=&#34;check-that-the-apps-dns-name-is-available&#34;&gt;Check that the app&amp;rsquo;s DNS name is available&lt;/h3&gt;
+&lt;p&gt;From the command line run&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ nslookup demo.timpsongray.com
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and ensure that the address returned is the static IP address that was created by Google earlier. This indicates that the DNS is responding correctly.&lt;/p&gt;
+&lt;h3 id=&#34;create-a-google-managed-ssl-certificate&#34;&gt;Create a Google Managed SSL Certificate&lt;/h3&gt;
+&lt;p&gt;We want to use &lt;code&gt;https&lt;/code&gt; on our publicly accessible endpoint so we&amp;rsquo;ll need to install an SSL certificate. There are a few ways to do this, but the most convenient is to use GCP&amp;rsquo;s managed SSL certificates.&lt;/p&gt;
+&lt;div class=&#34;alert alert-note&#34;&gt;
+  &lt;div&gt;
+    &lt;p&gt;&lt;strong&gt;DNSSEC&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;In order for the managed certicate creation to happen correctly, and for the external IP address you provisioned to be associated with it (when you create the Ingress service), &lt;strong&gt;DNSSEC&lt;/strong&gt; must be enabled on your domain and the &lt;strong&gt;&lt;code&gt;A&lt;/code&gt;&lt;/strong&gt; record you created on the domain must point to the static IP address.&lt;/p&gt;
+&lt;p&gt;If either of these aren&amp;rsquo;t set correctly, you may see a &lt;code&gt;Status: FailedNotVisible&lt;/code&gt; status when you issue the &lt;code&gt;kubectl describe managedcertificate&lt;/code&gt; command below, and the Ingress creation will fail.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;p&gt;We can request a managed SSL certificate using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ kubectl apply -f cert.yaml
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;where the content of the &lt;code&gt;cert.yaml&lt;/code&gt; file is&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;apiVersion: networking.gke.io/v1beta1
+kind: ManagedCertificate
+metadata:
+  name: demo-app-cert
+spec:
+  domains:
+    - demo.timpsongray.com
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;check-the-status-of-the-ssl-certificate&#34;&gt;Check the status of the SSL certificate&lt;/h3&gt;
+&lt;p&gt;We can check the status of the SSL provisioning process using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud compute ssl-certificates list --global
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;which will show something like&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;NAME                                       TYPE     CREATION_TIMESTAMP             EXPIRE_TIME  MANAGED_STATUS
+mcrt-5fc3491d-21fc-4dda-8eb3-6f1b91545247  MANAGED  2020-05-28T06:38:28.757-07:00               PROVISIONING
+demo.timpsongray.com: PROVISIONING
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;indicating that provisioning has started, and that the URL is as expected.&lt;/p&gt;
+&lt;h2 id=&#34;create-an-ingress-front-end-service&#34;&gt;Create an Ingress Front-End Service&lt;/h2&gt;
+&lt;p&gt;In order to connect the outside world with the back-end service we will create load-balanced Ingress service using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ kubectl apply -f ingress.yaml
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;where the content of the &lt;code&gt;ingress.yaml&lt;/code&gt; file is&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: demo-web
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: &amp;quot;clojure-app-v1-addr&amp;quot;
+    kubernetes.io/ingress.allow-http: &amp;quot;false&amp;quot;
+    networking.gke.io/managed-certificates: &amp;quot;demo-app-cert&amp;quot;
+  labels:
+    app: demo
+spec:
+  backend:
+    serviceName: demo-svc
+    servicePort: 8081
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Although the kubectl command returns quickly it can take a few minutes for the ingress to be provisioned, deployed and stabilized. You can check its status using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ kubectl describe ingress demo-web
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;When the provisioning is completed, you should be able to navigate to &lt;code&gt;https://demo.timpsongray.com&lt;/code&gt; and view your application.&lt;/p&gt;
+&lt;h3 id=&#34;viewing-logs&#34;&gt;Viewing Logs&lt;/h3&gt;
+&lt;p&gt;Kubernetes allows you to inspect the logs of the Clojure application if you specify the pod in which it&amp;rsquo;s running. In order to discover the pod name you can issue the following command&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ kubectl get pods
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;which will return something like&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;NAME                       READY   STATUS    RESTARTS   AGE
+demo-web-966bb64f7-zfrdh   1/1     Running   0          68m
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You can then issue the following command (substituting the correct pod name) to view the application logs&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ kubectl logs demo-web-966bb64f7-zfrdh
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&#34;closure&#34;&gt;Closure&lt;/h1&gt;
+&lt;p&gt;Deploying a web application to Kubernetes and exposing it on the web with a specific URL isn&amp;rsquo;t particularly difficult, but there are a number of places where things can go pear-shaped. Hopefully, this will help when you try to do the same thing.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Deploy a Clojure Pedestal API Server &amp; React/ClojureScript Web Application to Docker</title>
