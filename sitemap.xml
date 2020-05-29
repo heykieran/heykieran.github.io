@@ -3,21 +3,6 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>https://heykieran.github.io/talk/example/</loc>
-    <lastmod>2030-06-01T13:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://heykieran.github.io/</loc>
-    <lastmod>2030-06-01T13:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://heykieran.github.io/talk/</loc>
-    <lastmod>2030-06-01T13:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
     <loc>https://heykieran.github.io/authors/</loc>
     <lastmod>2020-05-28T05:49:44-04:00</lastmod>
   </url>
@@ -49,6 +34,11 @@
   
   <url>
     <loc>https://heykieran.github.io/tag/gke/</loc>
+    <lastmod>2020-05-28T05:49:44-04:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://heykieran.github.io/</loc>
     <lastmod>2020-05-28T05:49:44-04:00</lastmod>
   </url>
   
@@ -138,33 +128,8 @@
   </url>
   
   <url>
-    <loc>https://heykieran.github.io/publication-type/3/</loc>
-    <lastmod>2019-04-07T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
     <loc>https://heykieran.github.io/author/admin/</loc>
     <lastmod>2019-09-05T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://heykieran.github.io/publication/preprint/</loc>
-    <lastmod>2019-04-07T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://heykieran.github.io/publication_types/</loc>
-    <lastmod>2019-04-07T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://heykieran.github.io/publication/</loc>
-    <lastmod>2019-04-07T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://heykieran.github.io/tag/source-themes/</loc>
-    <lastmod>2019-04-07T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -203,28 +168,15 @@
   </url>
   
   <url>
-    <loc>https://heykieran.github.io/publication-type/2/</loc>
-    <lastmod>2015-09-01T00:00:00+00:00</lastmod>
+    <loc>https://heykieran.github.io/publication_types/</loc>
   </url>
   
   <url>
-    <loc>https://heykieran.github.io/publication/journal-article/</loc>
-    <lastmod>2015-09-01T00:00:00+00:00</lastmod>
+    <loc>https://heykieran.github.io/publication/</loc>
   </url>
   
   <url>
-    <loc>https://heykieran.github.io/author/robert-ford/</loc>
-    <lastmod>2015-09-01T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://heykieran.github.io/publication-type/1/</loc>
-    <lastmod>2013-07-01T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://heykieran.github.io/publication/conference-paper/</loc>
-    <lastmod>2013-07-01T00:00:00+00:00</lastmod>
+    <loc>https://heykieran.github.io/talk/</loc>
   </url>
   
 </urlset>
