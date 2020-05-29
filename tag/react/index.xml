@@ -7,7 +7,7 @@
     <description>react</description>
     <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Thu, 07 May 2020 12:10:26 -0400</lastBuildDate>
     <image>
-      <url>https://heykieran.github.io/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_2.png</url>
+      <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png</url>
       <title>react</title>
       <link>https://heykieran.github.io/tag/react/</link>
     </image>
@@ -653,7 +653,7 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-the-initial-view-of-the-home-page-no-logged-in-user&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The initial view of the home page (no logged-in user).&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The initial view of the home page (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
 
 
   &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1338&#34; height=&#34;352&#34;&gt;
@@ -692,7 +692,7 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-the-main-menu-no-logged-in-user&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page-menu-no-logged-in-user_hufd402a6ba5fecc72c633474ae2fa3e3d_57047_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The main menu (no logged-in user).&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page-menu-no-logged-in-user_hufd402a6ba5fecc72c633474ae2fa3e3d_57047_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The main menu (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
 
 
   &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page-menu-no-logged-in-user_hufd402a6ba5fecc72c633474ae2fa3e3d_57047_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1338&#34; height=&#34;674&#34;&gt;
@@ -738,7 +738,7 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-access-to-public-resource-is-allowed-no-logged-in-user&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/access-public-resource_huf6a3c9ebea043d4f5d4e6b23eba4a1b4_41499_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;Access to Public Resource is allowed (no logged-in user).&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/access-public-resource_huf6a3c9ebea043d4f5d4e6b23eba4a1b4_41499_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;Access to Public Resource is allowed (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
 
 
   &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/access-public-resource_huf6a3c9ebea043d4f5d4e6b23eba4a1b4_41499_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1340&#34; height=&#34;418&#34;&gt;
@@ -778,7 +778,7 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-the-standard-sign-in-page-no-logged-in-user&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The Standard Sign-In Page (no logged-in user).&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The Standard Sign-In Page (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
 
 
   &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1336&#34; height=&#34;868&#34;&gt;
@@ -816,7 +816,7 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-after-the-user-user-has-signed-in&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-user-signed-in_hu88471979aee3312eae8537ac4b138fbe_46032_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;After the user :user has signed in.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-user-signed-in_hu88471979aee3312eae8537ac4b138fbe_46032_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;After the user &amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt; has signed in.&#34;&gt;
 
 
   &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-user-signed-in_hu88471979aee3312eae8537ac4b138fbe_46032_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1340&#34; height=&#34;372&#34;&gt;
@@ -856,7 +856,7 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-the-user-user-is-allowed-to-access-to-the-user-resource&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-user-page-ok_hua77f555305a4e482c429b34566c4f1b6_45163_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The user (:user) is allowed to access to the User resource.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-user-page-ok_hua77f555305a4e482c429b34566c4f1b6_45163_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The user (&amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt;) is allowed to access to the &amp;lt;strong&amp;gt;User&amp;lt;/strong&amp;gt; resource.&#34;&gt;
 
 
   &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-user-page-ok_hua77f555305a4e482c429b34566c4f1b6_45163_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1344&#34; height=&#34;426&#34;&gt;
@@ -896,7 +896,7 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-the-user-user-is-denied-access-to-the-admin-resource&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-admin-page-denied_hu8fda4bc3b88839b1d49961b5d15e137b_125581_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The user (:user) is denied access to the Admin resource.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-admin-page-denied_hu8fda4bc3b88839b1d49961b5d15e137b_125581_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The user (&amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt;) is denied access to the &amp;lt;strong&amp;gt;Admin&amp;lt;/strong&amp;gt; resource.&#34;&gt;
 
 
   &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-admin-page-denied_hu8fda4bc3b88839b1d49961b5d15e137b_125581_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1334&#34; height=&#34;592&#34;&gt;
@@ -935,7 +935,7 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-a-view-of-the-standard-sign-out-page-with-user-user-is-logged-in&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/local-user-sign-out_hu5288488acb08e3af3122c648af377573_121592_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;A view of the standard Sign-Out page with user (:user) is logged in.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/local-user-sign-out_hu5288488acb08e3af3122c648af377573_121592_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;A view of the standard Sign-Out page with user (&amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt;) is logged in.&#34;&gt;
 
 
   &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/local-user-sign-out_hu5288488acb08e3af3122c648af377573_121592_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1334&#34; height=&#34;1170&#34;&gt;
@@ -1128,7 +1128,7 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-the-users-page-with-a-signed-in-google-user-mapped-to-application-id-admin&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-sign-out-page_hua45813ca70e13bb9a469ee5545a5e2d9_106661_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The Users page with a Signed-In Google user (mapped to application ID :admin).&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-sign-out-page_hua45813ca70e13bb9a469ee5545a5e2d9_106661_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The Users page with a Signed-In Google user (mapped to application ID &amp;lt;code&amp;gt;:admin&amp;lt;/code&amp;gt;).&#34;&gt;
 
 
   &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-sign-out-page_hua45813ca70e13bb9a469ee5545a5e2d9_106661_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1340&#34; height=&#34;908&#34;&gt;

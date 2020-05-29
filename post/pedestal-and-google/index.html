@@ -43,6 +43,9 @@
 
   
   
+  
+  <script src="/js/mathjax-config.js"></script>
+  
 
   
   
@@ -61,8 +64,10 @@
     
       
       
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin="anonymous" title="hl-light">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin="anonymous" title="hl-dark" disabled>
+        
+          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin="anonymous" title="hl-light">
+          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/dracula.min.css" crossorigin="anonymous" title="hl-dark" disabled>
+        
       
     
 
@@ -169,9 +174,9 @@
 
       
       
-        
-      
 
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" integrity="" crossorigin="anonymous" async></script>
       
     
       
@@ -248,8 +253,8 @@
   
 
   <link rel="manifest" href="/index.webmanifest">
-  <link rel="icon" type="image/png" href="/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_32x32_fill_lanczos_center_2.png">
-  <link rel="apple-touch-icon" type="image/png" href="/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_192x192_fill_lanczos_center_2.png">
+  <link rel="icon" type="image/png" href="/images/icon_hu4daeebf65b4de862d319721e891ef302_24365_32x32_fill_lanczos_center_2.png">
+  <link rel="apple-touch-icon" type="image/png" href="/images/icon_hu4daeebf65b4de862d319721e891ef302_24365_192x192_fill_lanczos_center_2.png">
 
   <link rel="canonical" href="https://heykieran.github.io/post/pedestal-and-google/">
 
@@ -266,11 +271,14 @@
   
   <meta property="twitter:card" content="summary">
   
+  <meta property="twitter:site" content="@TimpsonGray">
+  <meta property="twitter:creator" content="@TimpsonGray">
+  
   <meta property="og:site_name" content="heykieran Code Notes">
   <meta property="og:url" content="https://heykieran.github.io/post/pedestal-and-google/">
   <meta property="og:title" content="Pedestal API, ClojureScript SPA and Google Authentication | heykieran Code Notes">
-  <meta property="og:description" content="A longer discussion of my publicly available GitHub repository containing a secured Pedestal API server and ClojureScript/React SPA that can use Google login to authenticate a user. I show how to set up HTTPS, integrate with Google and secure API endpoints in the context of a simple React application."><meta property="og:image" content="https://heykieran.github.io/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_2.png">
-  <meta property="twitter:image" content="https://heykieran.github.io/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_2.png"><meta property="og:locale" content="en-us">
+  <meta property="og:description" content="A longer discussion of my publicly available GitHub repository containing a secured Pedestal API server and ClojureScript/React SPA that can use Google login to authenticate a user. I show how to set up HTTPS, integrate with Google and secure API endpoints in the context of a simple React application."><meta property="og:image" content="https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png">
+  <meta property="twitter:image" content="https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png"><meta property="og:locale" content="en-us">
   
     
       <meta property="article:published_time" content="2020-04-27T11:53:08-04:00">
@@ -313,10 +321,10 @@
   
   "publisher": {
     "@type": "Organization",
-    "name": "heykieran Code Notes",
+    "name": "Timpson Gray",
     "logo": {
       "@type": "ImageObject",
-      "url": "https://heykieran.github.io/images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_192x192_fill_lanczos_center_2.png"
+      "url": "https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_192x192_fit_lanczos_2.png"
     }
   },
   "description": "A longer discussion of my publicly available GitHub repository containing a secured Pedestal API server and ClojureScript/React SPA that can use Google login to authenticate a user. I show how to set up HTTPS, integrate with Google and secure API endpoints in the context of a simple React application."
@@ -382,13 +390,15 @@
 
 
 
+  
+
 
 <nav class="navbar navbar-expand-lg navbar-light compensate-for-scrollbar" id="navbar-main">
   <div class="container">
 
     
     <div class="d-none d-lg-inline-flex">
-      <a class="navbar-brand" href="/">heykieran Code Notes</a>
+      <a class="navbar-brand" href="/"><img src="/images/logo_hu40a566661c85156769430146dbdc8595_41816_0x70_resize_lanczos_2.png" alt="heykieran Code Notes"></a>
     </div>
     
 
@@ -401,7 +411,7 @@
 
     
     <div class="navbar-brand-mobile-wrapper d-inline-flex d-lg-none">
-      <a class="navbar-brand" href="/">heykieran Code Notes</a>
+      <a class="navbar-brand" href="/"><img src="/images/logo_hu40a566661c85156769430146dbdc8595_41816_0x70_resize_lanczos_2.png" alt="heykieran Code Notes"></a>
     </div>
     
 
@@ -493,7 +503,7 @@
     <ul class="nav-icons navbar-nav flex-row ml-auto d-flex pl-md-2">
       
       <li class="nav-item">
-        <a class="nav-link js-search" href="#"><i class="fas fa-search" aria-hidden="true"></i></a>
+        <a class="nav-link js-search" href="#" aria-label="Search"><i class="fas fa-search" aria-hidden="true"></i></a>
       </li>
       
 
@@ -576,12 +586,17 @@
     
       
     
-    2020-04-27
+    Apr 27, 2020
   </span>
   
 
   
 
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    12 min read
+  </span>
   
 
   
@@ -924,7 +939,7 @@ will be loaded. (You should have set this in <code>dev.cljs.edn</code> as above)
 <figure id="figure-the-initial-view-of-the-home-page-no-logged-in-user">
 
 
-  <a data-fancybox="" href="/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_2.png" data-caption="The initial view of the home page (no logged-in user).">
+  <a data-fancybox="" href="/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_2.png" data-caption="The initial view of the home page (&lt;strong&gt;no&lt;/strong&gt; logged-in user).">
 
 
   <img data-src="/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_2.png" class="lazyload" alt="" width="1338" height="352">
@@ -963,7 +978,7 @@ will be loaded. (You should have set this in <code>dev.cljs.edn</code> as above)
 <figure id="figure-the-main-menu-no-logged-in-user">
 
 
-  <a data-fancybox="" href="/post/pedestal-and-google/static/img/home-page-menu-no-logged-in-user_hufd402a6ba5fecc72c633474ae2fa3e3d_57047_2000x2000_fit_lanczos_2.png" data-caption="The main menu (no logged-in user).">
+  <a data-fancybox="" href="/post/pedestal-and-google/static/img/home-page-menu-no-logged-in-user_hufd402a6ba5fecc72c633474ae2fa3e3d_57047_2000x2000_fit_lanczos_2.png" data-caption="The main menu (&lt;strong&gt;no&lt;/strong&gt; logged-in user).">
 
 
   <img data-src="/post/pedestal-and-google/static/img/home-page-menu-no-logged-in-user_hufd402a6ba5fecc72c633474ae2fa3e3d_57047_2000x2000_fit_lanczos_2.png" class="lazyload" alt="" width="1338" height="674">
@@ -1009,7 +1024,7 @@ will be loaded. (You should have set this in <code>dev.cljs.edn</code> as above)
 <figure id="figure-access-to-public-resource-is-allowed-no-logged-in-user">
 
 
-  <a data-fancybox="" href="/post/pedestal-and-google/static/img/access-public-resource_huf6a3c9ebea043d4f5d4e6b23eba4a1b4_41499_2000x2000_fit_lanczos_2.png" data-caption="Access to Public Resource is allowed (no logged-in user).">
+  <a data-fancybox="" href="/post/pedestal-and-google/static/img/access-public-resource_huf6a3c9ebea043d4f5d4e6b23eba4a1b4_41499_2000x2000_fit_lanczos_2.png" data-caption="Access to Public Resource is allowed (&lt;strong&gt;no&lt;/strong&gt; logged-in user).">
 
 
   <img data-src="/post/pedestal-and-google/static/img/access-public-resource_huf6a3c9ebea043d4f5d4e6b23eba4a1b4_41499_2000x2000_fit_lanczos_2.png" class="lazyload" alt="" width="1340" height="418">
@@ -1049,7 +1064,7 @@ will be loaded. (You should have set this in <code>dev.cljs.edn</code> as above)
 <figure id="figure-the-standard-sign-in-page-no-logged-in-user">
 
 
-  <a data-fancybox="" href="/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_2.png" data-caption="The Standard Sign-In Page (no logged-in user).">
+  <a data-fancybox="" href="/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_2.png" data-caption="The Standard Sign-In Page (&lt;strong&gt;no&lt;/strong&gt; logged-in user).">
 
 
   <img data-src="/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_2.png" class="lazyload" alt="" width="1336" height="868">
@@ -1087,7 +1102,7 @@ will be loaded. (You should have set this in <code>dev.cljs.edn</code> as above)
 <figure id="figure-after-the-user-user-has-signed-in">
 
 
-  <a data-fancybox="" href="/post/pedestal-and-google/static/img/user-user-signed-in_hu88471979aee3312eae8537ac4b138fbe_46032_2000x2000_fit_lanczos_2.png" data-caption="After the user :user has signed in.">
+  <a data-fancybox="" href="/post/pedestal-and-google/static/img/user-user-signed-in_hu88471979aee3312eae8537ac4b138fbe_46032_2000x2000_fit_lanczos_2.png" data-caption="After the user &lt;code&gt;:user&lt;/code&gt; has signed in.">
 
 
   <img data-src="/post/pedestal-and-google/static/img/user-user-signed-in_hu88471979aee3312eae8537ac4b138fbe_46032_2000x2000_fit_lanczos_2.png" class="lazyload" alt="" width="1340" height="372">
@@ -1127,7 +1142,7 @@ will be loaded. (You should have set this in <code>dev.cljs.edn</code> as above)
 <figure id="figure-the-user-user-is-allowed-to-access-to-the-user-resource">
 
 
-  <a data-fancybox="" href="/post/pedestal-and-google/static/img/user-accesses-user-page-ok_hua77f555305a4e482c429b34566c4f1b6_45163_2000x2000_fit_lanczos_2.png" data-caption="The user (:user) is allowed to access to the User resource.">
+  <a data-fancybox="" href="/post/pedestal-and-google/static/img/user-accesses-user-page-ok_hua77f555305a4e482c429b34566c4f1b6_45163_2000x2000_fit_lanczos_2.png" data-caption="The user (&lt;code&gt;:user&lt;/code&gt;) is allowed to access to the &lt;strong&gt;User&lt;/strong&gt; resource.">
 
 
   <img data-src="/post/pedestal-and-google/static/img/user-accesses-user-page-ok_hua77f555305a4e482c429b34566c4f1b6_45163_2000x2000_fit_lanczos_2.png" class="lazyload" alt="" width="1344" height="426">
@@ -1167,7 +1182,7 @@ an access denied message.</p>
 <figure id="figure-the-user-user-is-denied-access-to-the-admin-resource">
 
 
-  <a data-fancybox="" href="/post/pedestal-and-google/static/img/user-accesses-admin-page-denied_hu8fda4bc3b88839b1d49961b5d15e137b_125581_2000x2000_fit_lanczos_2.png" data-caption="The user (:user) is denied access to the Admin resource.">
+  <a data-fancybox="" href="/post/pedestal-and-google/static/img/user-accesses-admin-page-denied_hu8fda4bc3b88839b1d49961b5d15e137b_125581_2000x2000_fit_lanczos_2.png" data-caption="The user (&lt;code&gt;:user&lt;/code&gt;) is denied access to the &lt;strong&gt;Admin&lt;/strong&gt; resource.">
 
 
   <img data-src="/post/pedestal-and-google/static/img/user-accesses-admin-page-denied_hu8fda4bc3b88839b1d49961b5d15e137b_125581_2000x2000_fit_lanczos_2.png" class="lazyload" alt="" width="1334" height="592">
@@ -1206,7 +1221,7 @@ an access denied message.</p>
 <figure id="figure-a-view-of-the-standard-sign-out-page-with-user-user-is-logged-in">
 
 
-  <a data-fancybox="" href="/post/pedestal-and-google/static/img/local-user-sign-out_hu5288488acb08e3af3122c648af377573_121592_2000x2000_fit_lanczos_2.png" data-caption="A view of the standard Sign-Out page with user (:user) is logged in.">
+  <a data-fancybox="" href="/post/pedestal-and-google/static/img/local-user-sign-out_hu5288488acb08e3af3122c648af377573_121592_2000x2000_fit_lanczos_2.png" data-caption="A view of the standard Sign-Out page with user (&lt;code&gt;:user&lt;/code&gt;) is logged in.">
 
 
   <img data-src="/post/pedestal-and-google/static/img/local-user-sign-out_hu5288488acb08e3af3122c648af377573_121592_2000x2000_fit_lanczos_2.png" class="lazyload" alt="" width="1334" height="1170">
@@ -1399,7 +1414,7 @@ an access denied message.</p>
 <figure id="figure-the-users-page-with-a-signed-in-google-user-mapped-to-application-id-admin">
 
 
-  <a data-fancybox="" href="/post/pedestal-and-google/static/img/google-user-sign-out-page_hua45813ca70e13bb9a469ee5545a5e2d9_106661_2000x2000_fit_lanczos_2.png" data-caption="The Users page with a Signed-In Google user (mapped to application ID :admin).">
+  <a data-fancybox="" href="/post/pedestal-and-google/static/img/google-user-sign-out-page_hua45813ca70e13bb9a469ee5545a5e2d9_106661_2000x2000_fit_lanczos_2.png" data-caption="The Users page with a Signed-In Google user (mapped to application ID &lt;code&gt;:admin&lt;/code&gt;).">
 
 
   <img data-src="/post/pedestal-and-google/static/img/google-user-sign-out-page_hua45813ca70e13bb9a469ee5545a5e2d9_106661_2000x2000_fit_lanczos_2.png" class="lazyload" alt="" width="1340" height="908">
@@ -1419,6 +1434,19 @@ an access denied message.</p>
     </div>
 
     
+
+
+
+
+
+  
+  
+
+<p class="edit-page">
+  <a href="https://github.com/heykieran/timpson-gray-blog/edit/master/content/post/pedestal-and-google/index.md">
+    <i class="fas fa-pen pr-2"></i>Edit this page
+  </a>
+</p>
 
 
 
@@ -1575,6 +1603,7 @@ an access denied message.</p>
 
 
 
+
   </div>
 </article>
 
@@ -1597,10 +1626,6 @@ an access denied message.</p>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/r.min.js"></script>
         
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/clojure.min.js"></script>
-        
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/java.min.js"></script>
-        
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/python.min.js"></script>
         
       
 
@@ -1632,7 +1657,8 @@ an access denied message.</p>
         'post': "Posts",
         'project': "Projects",
         'publication' : "Publications",
-        'talk' : "Talks"
+        'talk' : "Talks",
+        'slides' : "Slides"
         };
     </script>
     
@@ -1702,8 +1728,18 @@ an access denied message.</p>
   
 
   <p class="powered-by">
-    © Kieran J. Owens 2020 &middot; 
+    © Kieran J. Owens 2020
+  </p>
 
+  
+  
+
+
+
+
+
+
+  <p class="powered-by">
     Powered by the
     <a href="https://sourcethemes.com/academic/" target="_blank" rel="noopener">Academic theme</a> for
     <a href="https://gohugo.io" target="_blank" rel="noopener">Hugo</a>.
