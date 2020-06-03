@@ -1,0 +1,1375 @@
+<!DOCTYPE html><html lang="en-us" >
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="generator" content="Source Themes Academic 4.8.0">
+
+  
+
+  
+  
+  
+  
+  
+    
+    
+    
+  
+  
+
+  <meta name="author" content="Kieran Owens">
+
+  
+  
+  
+    
+  
+  <meta name="description" content="In this piece I will cover briefly how the Pedestal web-server operates, particularly the interceptor model and error handling; how to integrate a Pedestal web application with the buddy-auth library; and I will demonstrate with code how to secure access to Pedestal endpoints using the buddy-auth library.">
+
+  
+  <link rel="alternate" hreflang="en-us" href="https://heykieran.github.io/post/pedestal-buddy/">
+
+  
+
+
+  
+  
+  
+  <meta name="theme-color" content="#2962ff">
+  
+
+  
+  
+  
+  <script src="/js/mathjax-config.js"></script>
+  
+
+  
+  
+  
+  
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/academicons/1.8.6/css/academicons.min.css" integrity="sha256-uFVgMKfistnJAfoCUQigIl+JfUaP47GrRKjf6CTPVmw=" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0-1/css/all.min.css" integrity="sha256-4w9DunooKSr3MFXHXWyFER38WmPdm361bQS/2KUWZbU=" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+    
+    
+    
+      
+    
+    
+      
+      
+        
+          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin="anonymous" title="hl-light">
+          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/dracula.min.css" crossorigin="anonymous" title="hl-dark" disabled>
+        
+      
+    
+
+    
+
+    
+
+    
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.1.2/lazysizes.min.js" integrity="sha256-Md1qLToewPeKjfAHU1zyPwOutccPAm5tahnaw7Osw0A=" crossorigin="anonymous" async></script>
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" integrity="" crossorigin="anonymous" async></script>
+      
+    
+      
+
+      
+      
+
+      
+    
+
+  
+
+  
+  
+  
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Montserrat:400,700%7CRoboto:400,400italic,700%7CRoboto+Mono&display=swap">
+  
+
+  
+  
+  
+  
+  <link rel="stylesheet" href="/css/academic.css">
+
+  
+
+
+
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-153619296-3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+
+  function gtag() {
+      dataLayer.push(arguments);
+  }
+
+  function trackOutboundLink(url, target) {
+    gtag('event', 'click', {
+         'event_category': 'outbound',
+         'event_label': url,
+         'transport_type': 'beacon',
+         'event_callback': function () {
+           if (target !== '_blank') {
+             document.location = url;
+           }
+         }
+    });
+    console.debug("Outbound link clicked: " + url);
+  }
+
+  function onClickCallback(event) {
+    if ((event.target.tagName !== 'A') || (event.target.host === window.location.host)) {
+      return;
+    }
+    trackOutboundLink(event.target, event.target.getAttribute('target'));  
+  }
+
+  gtag('js', new Date());
+  gtag('config', 'UA-153619296-3', {});
+
+  
+  document.addEventListener('click', onClickCallback, false);
+</script>
+
+
+  
+
+
+  
+  
+
+  
+
+  <link rel="manifest" href="/index.webmanifest">
+  <link rel="icon" type="image/png" href="/images/icon_hu4daeebf65b4de862d319721e891ef302_24365_32x32_fill_lanczos_center_2.png">
+  <link rel="apple-touch-icon" type="image/png" href="/images/icon_hu4daeebf65b4de862d319721e891ef302_24365_192x192_fill_lanczos_center_2.png">
+
+  <link rel="canonical" href="https://heykieran.github.io/post/pedestal-buddy/">
+
+  
+  
+  
+  
+  
+  
+  
+    
+    
+  
+  
+  <meta property="twitter:card" content="summary">
+  
+  <meta property="twitter:site" content="@TimpsonGray">
+  <meta property="twitter:creator" content="@TimpsonGray">
+  
+  <meta property="og:site_name" content="heykieran Code Notes">
+  <meta property="og:url" content="https://heykieran.github.io/post/pedestal-buddy/">
+  <meta property="og:title" content="Pedestal, Buddy and Security | heykieran Code Notes">
+  <meta property="og:description" content="In this piece I will cover briefly how the Pedestal web-server operates, particularly the interceptor model and error handling; how to integrate a Pedestal web application with the buddy-auth library; and I will demonstrate with code how to secure access to Pedestal endpoints using the buddy-auth library."><meta property="og:image" content="https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png">
+  <meta property="twitter:image" content="https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png"><meta property="og:locale" content="en-us">
+  
+    
+      <meta property="article:published_time" content="2020-06-03T12:40:00&#43;00:00">
+    
+    <meta property="article:modified_time" content="2020-06-03T12:40:04&#43;00:00">
+  
+
+  
+
+
+    
+
+
+
+
+
+
+  
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://heykieran.github.io/post/pedestal-buddy/"
+  },
+  "headline": "Pedestal, Buddy and Security",
+  
+  "datePublished": "2020-06-03T12:40:00Z",
+  "dateModified": "2020-06-03T12:40:04Z",
+  
+  "author": {
+    "@type": "Person",
+    "name": "Kieran Owens"
+  },
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "Timpson Gray",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_192x192_fit_lanczos_2.png"
+    }
+  },
+  "description": "In this piece I will cover briefly how the Pedestal web-server operates, particularly the interceptor model and error handling; how to integrate a Pedestal web application with the buddy-auth library; and I will demonstrate with code how to secure access to Pedestal endpoints using the buddy-auth library."
+}
+</script>
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+
+  <title>Pedestal, Buddy and Security | heykieran Code Notes</title>
+
+</head>
+
+<body id="top" data-spy="scroll" data-offset="70" data-target="#TableOfContents" >
+
+  <aside class="search-results" id="search">
+  <div class="container">
+    <section class="search-header">
+
+      <div class="row no-gutters justify-content-between mb-3">
+        <div class="col-6">
+          <h1>Search</h1>
+        </div>
+        <div class="col-6 col-search-close">
+          <a class="js-search" href="#"><i class="fas fa-times-circle text-muted" aria-hidden="true"></i></a>
+        </div>
+      </div>
+
+      <div id="search-box">
+        
+        <input name="q" id="search-query" placeholder="Search..." autocapitalize="off"
+        autocomplete="off" autocorrect="off" spellcheck="false" type="search">
+        
+      </div>
+
+    </section>
+    <section class="section-search-results">
+
+      <div id="search-hits">
+        
+      </div>
+
+    </section>
+  </div>
+</aside>
+
+
+  
+
+
+
+
+
+
+  
+
+
+<nav class="navbar navbar-expand-lg navbar-light compensate-for-scrollbar" id="navbar-main">
+  <div class="container">
+
+    
+    <div class="d-none d-lg-inline-flex">
+      <a class="navbar-brand" href="/"><img src="/images/logo_hu40a566661c85156769430146dbdc8595_41816_0x70_resize_lanczos_2.png" alt="heykieran Code Notes"></a>
+    </div>
+    
+
+    
+    <button type="button" class="navbar-toggler" data-toggle="collapse"
+            data-target="#navbar-content" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span><i class="fas fa-bars"></i></span>
+    </button>
+    
+
+    
+    <div class="navbar-brand-mobile-wrapper d-inline-flex d-lg-none">
+      <a class="navbar-brand" href="/"><img src="/images/logo_hu40a566661c85156769430146dbdc8595_41816_0x70_resize_lanczos_2.png" alt="heykieran Code Notes"></a>
+    </div>
+    
+
+    
+    
+    <div class="navbar-collapse main-menu-item collapse justify-content-start" id="navbar-content">
+
+      
+      <ul class="navbar-nav d-md-inline-flex">
+        
+
+        
+
+        
+        
+        
+
+        
+        
+        
+        
+        
+        
+
+        <li class="nav-item">
+          <a class="nav-link  active" href="/"><span>Home</span></a>
+        </li>
+
+        
+        
+
+        
+
+        
+        
+        
+          
+        
+
+        
+        
+        
+        
+        
+        
+          
+          
+          
+            
+          
+          
+        
+
+        <li class="nav-item">
+          <a class="nav-link " href="/#posts"><span>Posts</span></a>
+        </li>
+
+        
+        
+
+        
+
+        
+        
+        
+          
+        
+
+        
+        
+        
+        
+        
+        
+
+        <li class="nav-item">
+          <a class="nav-link " href="/author/kieran-owens"><span>Contact</span></a>
+        </li>
+
+        
+        
+
+      
+
+        
+      </ul>
+    </div>
+
+    <ul class="nav-icons navbar-nav flex-row ml-auto d-flex pl-md-2">
+      
+      <li class="nav-item">
+        <a class="nav-link js-search" href="#" aria-label="Search"><i class="fas fa-search" aria-hidden="true"></i></a>
+      </li>
+      
+
+      
+      <li class="nav-item dropdown theme-dropdown">
+        <a href="#" class="nav-link js-theme-selector" data-toggle="dropdown" aria-haspopup="true">
+          <i class="fas fa-palette" aria-hidden="true"></i>
+        </a>
+        <div class="dropdown-menu">
+          <a href="#" class="dropdown-item js-set-theme-light">
+            <span>Light</span>
+          </a>
+          <a href="#" class="dropdown-item js-set-theme-dark">
+            <span>Dark</span>
+          </a>
+          <a href="#" class="dropdown-item js-set-theme-auto">
+            <span>Automatic</span>
+          </a>
+        </div>
+      </li>
+      
+
+      
+
+    </ul>
+
+  </div>
+</nav>
+
+
+  <article class="article">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+  
+  
+<div class="article-container pt-3">
+  <h1>Pedestal, Buddy and Security</h1>
+
+  
+  <p class="page-subtitle">How to use the buddy-auth libary to secure a Pedestal Application.</p>
+  
+
+  
+    
+
+
+<div class="article-metadata">
+
+  
+  
+  
+  
+  <div>
+    
+
+  
+  <span><a href="/author/kieran-owens/">Kieran Owens</a></span>
+  </div>
+  
+  
+
+  
+  <span class="article-date">
+    
+    
+      
+          Last updated on
+      
+    
+    Jun 3, 2020
+  </span>
+  
+
+  
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    20 min read
+  </span>
+  
+
+  
+  
+  
+  <span class="middot-divider"></span>
+  <a href="/post/pedestal-buddy/#disqus_thread"></a>
+  
+
+  
+  
+  <span class="middot-divider"></span>
+  <span class="article-categories">
+    <i class="fas fa-folder mr-1"></i><a href="/category/blog-post/">Blog Post</a></span>
+  
+
+</div>
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+</div>
+
+
+
+  <div class="article-container">
+
+    <div class="article-style">
+      <h1 id="introduction">Introduction</h1>
+<p>In this piece I show how to integrate 
+<a href="https://funcool.github.io/buddy-auth/latest/" target="_blank" rel="noopener">Buddy&rsquo;s</a> authentication and authorization functionality with a 
+<a href="http://pedestal.io/index" target="_blank" rel="noopener">Pedestal</a> web application.</p>
+<p>I provide a brief overview of Pedestal&rsquo;s interceptor model, particularly error-handling, which we&rsquo;ll use to catch and handle any authentication or authorization errors thrown by Buddy.</p>
+<p>I also cover some of Buddy&rsquo;s available functionality; how to decide if access to a web resource should be allowed; and how to respond to the requesting client when access is denied.</p>
+<h2 id="whats-not-covered">What&rsquo;s not covered?</h2>
+<p>For the purpose of this discussion, there is an assumption that the application is using session-based security. However, there is no discussion of how the user session is <strong>actually</strong> populated for use by Pedestal and Buddy.</p>
+<p>This is an important topic and if you want to learn more about how to manage the login and session population processes, you can review the following 
+<a href="https://heykieran.github.io/post/pedestal-and-google/" target="_blank" rel="noopener">blog post</a>, where I&rsquo;ve covered it more fully, or the source code for the application available on 
+<a href="https://github.com/heykieran/clj-pedestal-google" target="_blank" rel="noopener">GitHub</a>.</p>
+<h1 id="the-web-application">The Web Application</h1>
+<p>The web application will proceed through the following steps:</p>
+<ul>
+<li>The user requests a resource located at a URL on the server</li>
+<li>The application identifies &amp; authenticates the user</li>
+<li>The application determines the valid role(s) for the user</li>
+<li>The application determines if the user&rsquo;s role(s) permit access to the resource</li>
+<li>The application either serves the resource <strong>or</strong> returns an access-denied response.</li>
+</ul>
+<p>Initially, I elide certain details, such as how the user asserts an identity, but return to them later in the piece.</p>
+<h1 id="pedestal">Pedestal</h1>
+<p>Pedestal is a set of libraries developed by the team at Cognitect to facilitate the creation of web applications in Clojure. It uses the <em>interceptor</em> pattern, which differs from the handler/middleware pattern adopted by Ring.</p>
+<p>Oversimplifed, but adequate for our purposes, a Pedestal application is a <em>chain</em> of interceptors with each interceptor being an entity with an <code>:enter</code> function, a <code>:leave</code> function, and an <code>:error</code> function. The web-server receives a request, bundles it into a <em>context</em> (a map) and then threads that context through each interceptor, which has an opportunity to change it, producing a final context which is marshalled into an HTTP response and returned to the requesting client.</p>
+<p>The chaining logic through the interceptors is <em>two-pass</em>.</p>
+<p>If we consider a chain of interceptors <strong>I1</strong>, <strong>I2</strong> and <strong>I3</strong>: Pedestal will push the context through <strong>I1</strong>, then <strong>I2</strong> and then <strong>I3</strong>. It will then pull the context back through the chain in reverse order i.e. <strong>I3</strong>, then <strong>I2</strong>, and finally <strong>I1</strong>. In the <em>push</em> phase each interceptor&rsquo;s <code>:enter</code> function will be called with the context as its argument, and the return value (also a context) will be passed to the next interceptor&rsquo;s <code>:enter</code> function. During the <em>pull</em> phase, each interceptor&rsquo;s <code>:leave</code> function will be called. As with the <em>push</em> phase, each interceptor&rsquo;s <code>:leave</code> function will receive the context as its argument and is expected to return a context which is passed to the next interceptor.</p>
+<div class="alert alert-note">
+  <div>
+    <p>In the discussion above, I&rsquo;ve stated that an interceptor function receives a context and returns a context. This is conceptually correct, but obscures one of Pedestal&rsquo;s useful features.</p>
+<p>An interceptor function can also return a <code>core.async</code> channel. When this happens, Pedestal will yield the thread, allowing other activity to occur, and will recommence when a value is available on the channel. When that happens, Pedestal will read <strong>one</strong> value from the channel (which <strong>must</strong> be a context) and continue processing the chain.</p>
+  </div>
+</div>
+<p>Although it&rsquo;s not particularly relevant to our current discussion, it&rsquo;s important to note that the interceptor chain is not <strong>fixed</strong> in any general sense. An interceptor, within the context it receives, has access to the chain itself and can manipulate it.</p>
+<p>What <strong>is</strong> relevant is how the Pedestal interceptor chain handles errors and exceptions. Although the Pedestal interceptor call sequence is analagous to a function call stack, the calls do not exist in that nested manner on the JVM call stack. Therefore, it&rsquo;s not possible to use Clojure&rsquo;s try/catch mechanism to catch exceptions thrown by one interceptor in a different interceptor further up the stack.</p>
+<p>The Pedestal <em>machinery</em> catches any exception thrown by an interceptor, wraps it in an <code>ExceptionInfo</code> instance and associates the instance into the context map with the key <code>:io.pedestal.interceptor.chain/error</code>. Pedestal then back tracks through the interceptor chain looking for an interceptor with an <code>:error</code> function that can handle the exception.</p>
+<p>Each <code>:error</code> function is called with two arguments, the context (without the <code>:io.pedestal.interceptor.chain/error</code> key) and the <code>ExceptionInfo</code> instance. If an interceptor&rsquo;s <code>:error</code> function can handle the error the interceptor should return a context. In that case, Pedestal will continue processing the remaining interceptor&rsquo;s <code>:leave</code> functions and ultimately return a response to the client.</p>
+<p>If an interceptor&rsquo;s <code>:error</code> function cannot handle the exception it should reattach the <code>ExceptionInfo</code> instance it received to the context (as <code>:io.pedestal.interceptor.chain/error</code>) and return the new updated context. This allows Pedestal to continue searching for an appropriate handler.</p>
+<p>During Pedestal&rsquo;s exception handling process no <code>:enter</code> or <code>:leave</code> functions will be called while the context map contains a <code>:io.pedestal.interceptor.chain/error</code> entry.</p>
+<h1 id="buddy">Buddy</h1>
+<p>
+<a href="https://funcool.github.io/buddy-auth/latest/" target="_blank" rel="noopener">Buddy</a> is a Clojure library providing authentication and authorization facilites to web applications. Although its documentation is primarily focused on ring based applications, the library itself is flexible enough to be used with just about any Clojure web-application library including Pedestal.</p>
+<p>Buddy treats authentication and authorization as independent concerns. Authentication decides who you are, and authorization determines what you can do. I discuss authentication first, and return to the topic of authorization.</p>
+<p>Within Buddy there are available many mechanisms to authenticate the user, and Buddy refers to these machanisms as <em>backends</em>. The two we will discuss in greater detail below are <strong>session</strong> and (in a different blog post) <strong>jws</strong> (signed JWT).</p>
+<p>Conceptually, for all backends, Buddy&rsquo;s authentication functionality is extremely simple. It occurs in two phases: a <strong>parse</strong> phase, and an <strong>auth</strong> phase</p>
+<h2 id="parse-phase">Parse Phase</h2>
+<p>During the <strong>parse</strong> phase the backend takes the http request (for example, contained in Pedestal&rsquo;s context map) and extracts from it any values required by the backend&rsquo;s <strong>auth</strong> phase. These values could be in the request&rsquo;s headers, session, query params etc; it depends on the backend. If the parsing of the request returns nothing (<code>nil</code>/<code>false</code>) then further processing by Buddy stops and the auth phase is not entered - the request (and the requestor) is considered <code>unauthenticated</code>. Otherwise, the relevant values from parsing are passed to the <strong>auth</strong> phase.</p>
+<h2 id="auth-phase">Auth Phase</h2>
+<p>During the <strong>auth</strong> phase, the values returned by the <strong>parse</strong> phase are used to determine the identity of the user. This involves calling the backend&rsquo;s authentication function (<code>auth-fn</code>) with those values. If the <code>auth-fn</code> returns a non-nil, non-false value then the request map&rsquo;s <code>:identity</code> key is set to that value. This value represents an authenticated user. As with parsing, how authentication is done depends on the backend in use. Possibly, it&rsquo;s an extraction of a session identifier followed by a database lookup, or even a decryption and verification of a signed JWT that was parsed from the request&rsquo;s headers.</p>
+<p>Buddy provides a number of backend, but you&rsquo;re also free to define your own if they do not meet your needs.</p>
+<h1 id="review-of-application">Review of Application</h1>
+<p>Considering what we know about interceptors and Buddy, we can now sketch out an approach to securing the application, and then its implementation using Pedestal interceptors.</p>
+<h2 id="the-security-model">The Security Model</h2>
+<h3 id="user">User</h3>
+<p>The basic entity is the <strong>user</strong>. A <strong>user</strong> can be associated with one or more email addresses. At a later stage this will allow the application use a variety of external identity providers, such as Google, Facebook, Azure etc. Obviously, an email address can be associated with <strong>only</strong> one application <strong>user</strong> entity.</p>
+<h3 id="role">Role</h3>
+<p>A <strong>user</strong> can also be assigned to one or more <strong>roles</strong>. <strong>Roles</strong> determine a <strong>user&rsquo;s</strong> permissions within the web application. <strong>Roles</strong> exist independently of each other and within a <em>flat</em> structure. There are no concepts of hierarchy and inheritance.</p>
+<h3 id="route">Route</h3>
+<p><strong>Roles</strong> are granted (or denied) HTTP <em>verb</em> access to individual <strong>uri&rsquo;s</strong> which are represented in the Pedestal world as <strong>routes</strong>. A <strong>route</strong> may also be <em>unprotected</em> meaning that its uri is accessible to unauthenticated users (i.e. the public).</p>
+<p>There are two ways to allow <em>unprotected</em> access to a resource</p>
+<ol>
+<li>
+<p>Do not use interceptors that manage or restrict access based on identity and permissions. (These interceptors are established for a <strong>route</strong> with the <code>build-secured-route-vec-to</code> function, which is dicussed in greater detail below).</p>
+</li>
+<li>
+<p>Name the route using a value in the <code>:alloc-public</code> namespace (see note below on how the <strong>permissions</strong> lookup table is populated).</p>
+</li>
+</ol>
+<h3 id="example">Example</h3>
+<p>The following code fragment defines three routes</p>
+<pre><code class="language-clojure">(def routes
+  (route/expand-routes
+    #{[&quot;/&quot; :get landing-page :route-name :landing-page]
+      [&quot;/api/htest&quot; :get (build-secured-route-vec-to test-response) 
+        :route-name :alloc-user/auth-test-response-get]
+      [&quot;/api/htest&quot; :post (build-secured-route-vec-to test-response)
+       :route-name :alloc-admin/auth-test-response-post]}))
+</code></pre>
+<p>Each vector in the set passed to <code>expand-route</code>, contains a uri pattern, a method, an interceptor (or vector of interceptors) and a <code>:route-name</code> key with its associated value. The application will use the namespace of the route name to build a <strong>permission</strong> table linking a uri to a <strong>role</strong>.</p>
+<p>In the fragment above the path <code>/</code> is available to any user (including unauthenticated users) as the only active interceptor is the <code>landing-page</code> interceptor, which uses no authentication.</p>
+<p>The ability to <code>GET</code> from <code>/api/htest</code> is restricted to <strong>users</strong> with the <code>:user</code> <strong>role</strong>, and the ability to <code>POST</code> to the uri is restricted to <strong>users</strong> with the <code>:admin</code> <strong>role</strong>. This is ensured because the <code>build-secured-route-vec-to</code> function inserts the necessary authentication and permission checking interceptors into the uri&rsquo;s interceptor chain before the <code>test-response</code> handler/interceptor.</p>
+<p>This approach is helpful as Pedestal, when seeing a <em>pure</em> handler function as the last entry in an interceptor vector, will convert it to an interceptor. (A <em>pure</em> handler function is a single arity function taking a <code>request</code> as its argument). This means that a handler function can be fully exercised in the REPL before attempting to secure it.</p>
+<p>Using the information encoded in the <strong>routes</strong>, the <strong>permission</strong> table will be constructed by the application at runtime and is used by the interceptor responsible for checking permissions that the authenticated user is in a <strong>role</strong> required to access the resource.</p>
+<h2 id="the-interceptor-chain">The Interceptor Chain</h2>
+<p>Now, a consideration of the interceptor chain built by the <code>build-secured-route-vec-to</code> function. This function taking as its first argument an interceptor (or handler function) will return a vector of interceptors appropriate for the dual functions of authenticating the <strong>user</strong> and authorizing his/her access to the resource (uri). The function also accepts a number of other options, which we will return to later.</p>
+<ul>
+<li>
+<p>The first interceptor in the security-related portion of the interceptor chain attempts to authenticate the user. It is provided a context map, and will update the <code>:request</code> portion of the context map using the <code>buddy.auth.middleware/authentication-request</code> function.
+This function takes as parameters the request, and the backend. It will populate the <code>:identity</code> key of the request map if authentication suceeds (as determined by the backend). If the authentication fails the backend&rsquo;s <code>:unauthorized-handler</code> is called. This returns a 401 response to the client.</p>
+</li>
+<li>
+<p>The next interceptor retrieves the <code>:identity</code> from the the context&rsquo;s <code>:request</code> map and looks up the roles associated with the user. It attaches the information retrieved to the context map using the key <code>:alloc-auth/auth</code>. The value added will be a map with two keys <code>:user</code> and <code>:roles</code>. By attaching this information to the context map, it becomes available for interceptors later in the chain.</p>
+</li>
+<li>
+<p>Then the <em><strong>error catching</strong></em> interceptor (created by the function <code>alloc-auth-unauthorized-interceptor</code>) is entered. It returns the received context map unchanged. It&rsquo;s only responsibility is to handle exceptions that might be thrown later by the interceptors named <code>:alloc-auth-permission-checker</code> and <code>:alloc-auth-access-rule-checker</code>. These two interceptors in turn check the user&rsquo;s access to a resource (uri) based on his/her assigned roles; and checks his/her access based on custom defined rules. (I provide a expanded description of both below.)</p>
+<div class="alert alert-note">
+<div>
+  A benefit of using a single <em>error catching</em> interceptor is that there is a consolidation of application responses in a single area of the code rather than having them spread throughout the code in other interceptors&rsquo; <code>:error</code> functions. Also, the interceptor is created by the <code>alloc-auth-unauthorized-interceptor</code> function which takes a <em>backend</em> as a parameter. This parameter is <em>closed over</em> by the function. Therefore, in addition to the consistency of responses mentioned above, it also ensures that the backend is fully <em>swappable</em> and can be changed without impacting other areas of the code.
+</div>
+</li>
+</ul>
+</div>
+<ul>
+<li>
+<p>The next interceptor in the chain (<code>:alloc-auth-permission-checker</code>) extracts the <code>:alloc-auth/auth</code> value from the context map and compares its <code>:roles</code> value against the roles required to access the resource using the <strong>permissions</strong> table. If the comparison fails to find a match between the user&rsquo;s assigned roles and the roles required to access the resource, the interceptor will throw an &ldquo;Alloc-Unauthorized&rdquo; exception. This will cause Pedestal to start looking for a handler, finding it in the <em><strong>error catching</strong></em> interceptor (see above), which ultimately returns a 401 or 403 response to the client.</p>
+</li>
+<li>
+<p>If the request has gotten this far, then the user is <em>superficially</em> allowed to access the resource (by HTTP <em>verb</em> and uri), but there may be other, <em>finer</em> restrictions to be considered. The final interceptor related to security is now entered (<code>:alloc-auth-access-rule-checker</code>). It takes the context map&rsquo;s <code>:request</code> value and runs a set of rules against it using functions in the <code>buddy.auth.accessrules</code> namespace. If these rules result in a <code>success</code> the resource is returned to the client; if not, an exception is thrown, which is again handled by the <em><strong>error catching</strong></em> interceptor. This will return a 401 or 403 response to the client as appropriate.</p>
+</li>
+</ul>
+<h2 id="access-rules">Access Rules</h2>
+<p>Access rules are helpful when an application developer want to allow access to a <strong>route</strong> only under certain circumstances; circumstances that cannot be encoded in a <strong>route</strong>&lsquo;s uri pattern. As a trivial example, consider the situation where the developer wants to grant access to a uri pattern <code>/api/dostuff/:id</code> between 9:00AM and 5:00PM only.</p>
+<p>A way to achieve this is to use an <strong>access rule</strong> defined according to the convention required by <code>buddy.auth.accessrules</code>.</p>
+<p>Such a rule can be expressed as follows</p>
+<pre><code class="language-clojure">(def rule-1
+  [{:uri &quot;/api/dostuff/:id&quot;
+    :handler
+         (fn [request]
+           (let
+             [d (time/local-date) n (time/local-date-time)]
+             (if (time/before?
+               (time/local-date-time (str d &quot;T09:00:00&quot;))
+               n
+               (time/local-date-time (str d &quot;T17:00:00&quot;)))
+                 (buddy.auth.accessrules/success)
+                 (buddy.auth.accessrules/error))))}])
+</code></pre>
+<p>If it was required that the <strong>role</strong> should be granted access during those hours only, and when the <code>:id</code> parameter is equal to &ldquo;<code>company1</code>&rdquo; the rule would be</p>
+<pre><code class="language-clojure">(def rule1
+  [{:uri &quot;/api/dostuff/:id&quot;
+    :handler
+         (fn [request]
+           (let
+             [{company-id :id}
+              (-&gt; request :match-params)
+              user-identity (-&gt; request :identity)
+              auth? (buddy.auth/authenticated? request)
+              uri (-&gt; request :uri)
+              d (time/local-date)
+              n (time/local-date-time)]
+             (if (and
+                   (= company-id &quot;company1&quot;)
+                   (time/before?
+                     (time/local-date-time (str d &quot;T09:00:00&quot;))
+                     n
+                     (time/local-date-time (str d &quot;T17:00:00&quot;))))
+               (buddy.auth.accessrules/success)
+               (buddy.auth.accessrules/error))))}])
+</code></pre>
+<blockquote>
+<p>Because, <code>buddy-auth</code> attaches the user&rsquo;s identity to the <code>request</code> map in the context map, it can be retrived and used during the processing of an access rule. Also, any path params extracted from the uri will be available in the handler function in the <code>request</code> map&rsquo;s <code>:path-params</code> field.</p>
+</blockquote>
+<p>When a rule returns <code>error</code> it results in an unauthorized exception being raised by the backend. This exception is caught in the <em><strong>error catching</strong></em> interceptor as before.</p>
+<h1 id="buddy-backends">Buddy Backends</h1>
+<p>As previously mentioned, a backend is responsible for providing a function (<code>authfn</code>) that can authenticate a user, a function (<code>unauthorized-handler</code>) responsible for handling authentication and authorization failures, and possibly a function (<code>on-error</code>) to handle errors.</p>
+<p>Internally, a backend is an instance of an object that implements two protocols defined in the <code>buddy.auth.protocols</code> namespace, namely <code>IAuthentication</code> and <code>IAuthorization</code>.</p>
+<p>The <code>IAuthentication</code> protocol must provide the <code>-parse</code> method, a function to extract any required information from the suplied request; and the <code>-authenticate</code> method, a function to authenticate the user. The <code>-authenticate</code> method will call the <code>authfn</code> function passed when the backend is created in the application.</p>
+<p>The <code>IAuthorization</code> protocol must provide the <code>-handle-unauthorized</code> method which will call the <code>unauthorized-handler</code> function with the request map and a metadata argument describing the failure.</p>
+<p>Fortunately, <code>buddy-auth</code> comes with a number of built-in backends.</p>
+<h2 id="the-session-back-end">The Session Back-End</h2>
+<p>One of the back-ends provided by Buddy is <code>session</code>, which relies on ring&rsquo;s 
+<a href="https://ring-clojure.github.io/ring/ring.middleware.session.html" target="_blank" rel="noopener">session</a> support. During the parse phase, the request&rsquo;s session map is inspected for an <code>:identity</code> key. If that key exists it&rsquo;s passed to the auth phase, which simply sets the request map&rsquo;s <code>:identity</code> key to that value. It&rsquo;s really that simple.</p>
+<p>If you use sessions there are a number of security implications that you should consider. First, although the complete session information exists only on the server, the session&rsquo;s identifier is passed back and forth between the client and the server, and despite some of the security mechanisms employed by browsers (and user agents, more generally), and the cookie-based session functionality provided by ring you will need to be careful.</p>
+<p>You should only use https. This ensures that the information passed between the client and the server is encryped in transit. Also, cookies should be set to <code>Secure</code>. Also, you should consider strongly the use of <code>HttpOnly</code> and <code>SameSite</code>. 
+<a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP</a> provides some very good information regarding session security, and you should review it.</p>
+<h2 id="using-ring-session-middleware-with-pedestal">Using Ring Session Middleware with Pedestal</h2>
+<p>Because of the fundamental differences between Pedestal&rsquo;s interceptor model and Ring&rsquo;s wrapped middleware model, Pedestal provides in its <code>io.pedestal.http.ring-middlewares</code> namespace an ability to adapt a Ring middleware function to an interceptor context. Conveniently, the namespace also provides a function (<code>session</code>) which does this specifically for adapting Ring&rsquo;s session middleware. We only need to include the interceptor returned by this function in our interceptor chain to make use of Ring sessions in our Pedestal application.</p>
+<h2 id="using-buddys-session-back-end-with-pedestal">Using Buddy&rsquo;s session back-end with Pedestal</h2>
+<p>Buddy provides an implementation of the <code>session</code> back-end in the <code>buddy.auth.backends</code> namespace and it can be instantiated using the <code>buddy.auth.backends/session</code> function. This function can also accept an options map containing <code>:authfn</code> and <code>:unauthorized-handler</code> keys, which if supplied are expected to be functions that handle authentication and what to do when a request is not authorized respectively. If neither is supplied, Buddy will supply sensible defaults.</p>
+<p>For our purposes, the default <code>:authfn</code> function will suffice, but because we will later have to handle authorization we will provide our own <code>:unauthorized-handler</code> function.</p>
+<pre><code class="language-clojure">
+(def alloc-auth-session-auth-backend
+  (auth.backends/session
+    {:unauthorized-handler
+     (fn unauthorized-handler
+       [request metadata]
+       (let [{user         :user roles :roles required :required
+              user-session :user-session}
+             (get-in metadata [:details :request])
+             error-message
+             (str &quot;NOT AUTHORIZED (SESSION): In unauthenticated handler for &quot;
+                  &quot;uri: &quot; (pr-str (:uri request)) &quot;, &quot;
+                  &quot;and path-params &quot;
+                  (pr-str (:path-params request)) &quot;. &quot;
+                  &quot;user: &quot; (pr-str user) &quot;, &quot;
+                  &quot; roles: &quot; (pr-str roles) &quot;. &quot;
+                  &quot;required: &quot; (pr-str required) &quot;. &quot;
+                  &quot;user-session: &quot; (pr-str user-session) &quot;.&quot;)]
+         (if user-session
+           (rlog/with-forward-context
+             user-session
+             (log/error
+               error-message))
+           (log/error
+             error-message)))
+       (cond
+         ;; If request is authenticated, raise 403 instead
+         ;; of 401 (because user is authenticated but permission
+         ;; denied is raised).
+         (auth/authenticated? request)
+         (-&gt; (ring-response/response
+               {:reason
+                (str &quot;Authenticated, but not authorized for access to .\n&quot;
+                     &quot;Metadata : &quot; (pr-str metadata))})
+             (assoc :status 403))
+         ;; In other cases, respond with a 401.
+         :else
+         (let [current-url (:uri request)]
+           (-&gt;
+             (ring-response/response
+               {:reason &quot;Unauthorized&quot;})
+             (assoc :status 401)
+             (ring-response/header &quot;WWW-Authenticate&quot; &quot;tg-auth, type=1&quot;)))))}))
+
+</code></pre>
+<h1 id="the-route-and-interceptor-implementations">The Route and Interceptor Implementations</h1>
+<h2 id="building-the-interceptor-chain">Building the Interceptor Chain</h2>
+<p>For each Pedestal route defined in the application, an interceptor chain (a vector of interceptors) is constructed and included in the service map which is passed to <code>io.pedestal.http/start</code> to start the server. The application uses a function <code>build-secured-route-vec-to</code> to return a vector of interceptors that are <em>installed</em> for the route. The vector returned will include a number of common interceptors in addition to the security-related interceptors we&rsquo;ve been discussing.</p>
+<p>The <code>build-secured-route-vec-to</code> function takes as parameters a <strong>handler</strong> (or interceptor), and potentially two option parameters, <code>:use-headers</code> and <code>:rules</code>. The <strong>handler</strong> is installed as the last interceptor in the chain, and is expected to provide the business-logic functionality.</p>
+<p>If a <code>:rules</code> option is supplied, it is expected to be a map conforming to the format required by <code>buddy.auth.accessrules</code>. The presence of the <code>:rules</code> option will also cause the <code>:alloc-auth-access-rule-checker</code> interceptor to be included in the vector of interceptors returned.</p>
+<p>The <code>:use-headers</code> option can be ignored for now. It will be the subject of another blog post discussing how to create a custom backend for Buddy.</p>
+<h2 id="the-security-interceptors">The Security Interceptors</h2>
+<p>Now let&rsquo;s take a closer look at the implementation details of the security-related interceptors mentioned above.</p>
+<h3 id="the-alloc-auth-authenticate-interceptor">The <code>:alloc-auth-authenticate</code> interceptor</h3>
+<p>This interceptor is responsible for the authentication of the user and is created by the  <code>alloc-auth-authentication-interceptor</code> function.</p>
+<pre><code class="language-clojure">(defn alloc-auth-authentication-interceptor
+  [backend]
+  (interceptor/interceptor
+    {:name  ::alloc-auth-authenticate
+     :enter (fn [ctx]
+              (update
+                ctx
+                :request
+                auth.middleware/authentication-request
+                backend))}))
+</code></pre>
+<p><code>authentication-request</code> is a function which takes a <strong>request</strong> and a <strong>backend</strong> and using the <strong>backend</strong> attempts to parse the <strong>request</strong> and to authenticate the user. If the user is sucessfully authenticated an <code>:identity</code> key is added to the request map with the value returned by the backend&rsquo;s <code>authfn</code> function. The interceptor simply updates and returns the context map with the (potentially) updated <strong>request</strong> map returned by the call to <code>authentication-request</code>.</p>
+<h3 id="the-alloc-auth-user-roles-interceptor">The <code>:alloc-auth-user-roles</code> interceptor</h3>
+<p>This interceptor will attach to the context map information about the roles to which the user has been assigned. It is created by calling the <code>alloc-auth-user-roles-interceptor</code> function.</p>
+<pre><code class="language-clojure">(defn alloc-auth-user-roles-interceptor
+  []
+  {:name  ::alloc-auth-user-roles
+   :enter (fn [ctx]
+            (log/info &quot;Assigning roles for identity &quot; (pr-str (get-in ctx [:request :identity])))
+            (let
+              [{identity-user-id    :alloc-auth/user-id
+                identity-token-type :alloc-auth/token-type
+                identity-token      :alloc-auth/token}
+               (get-in ctx [:request :identity])]
+              (assoc
+                ctx
+                :alloc-auth/auth
+                {:user  identity-user-id
+                 :roles (alloc-auth-get-roles-for-identity identity-user-id)})))})
+</code></pre>
+<p>This interceptor was discussed quite extensively above, but two items are worth noting. The authenticated user (in the <strong>request</strong> map&rsquo;s <code>:identity</code> field) is expected to be identified by a map with the keys <code>:alloc-auth/user-id</code>, <code>:alloc-auth/token-type</code> and <code>:alloc-auth/token</code>. For our current discussion the first of these is the most important, and using buddy&rsquo;s session backend would have been extracted from the user&rsquo;s session object. It is the internal application user id for the user e.g. <code>:admin</code> or <code>:fred</code>.</p>
+<p>This value is used by <code>alloc-auth-get-roles-for-identity</code> to return a collection of <strong>role</strong> entities indicating with which roles the user is associated. The interceptor returns an updated context with this information attached in the <code>:alloc-auth/auth</code> key.</p>
+<h3 id="the-error-catcher-interceptor">The Error Catcher interceptor</h3>
+<p>This interceptor will catch authentication and authorization errors raised by the <code>:alloc-auth-permission-checker</code> and <code>:alloc-auth-access-rule-checker</code> interceptors (any others are ignored). This interceptor is created by calling the <code>alloc-auth-unauthorized-interceptor</code> function, which internally uses Pedestal&rsquo;s <code>error-dispatch</code> function to match errors with handlers.</p>
+<pre><code class="language-clojure">(defn alloc-auth-unauthorized-interceptor
+  [backend]
+  (letfn
+    [(unauthorized-fn[ctx ex]
+       (assoc
+         ctx
+         :response
+         (.-handle-unauthorized
+           backend
+           (:request ctx)
+           {:details
+            {:request (ex-data (ex-cause ex))
+             :message (pr-str (ex-message (ex-cause ex)))}})))]
+    (error-dispatch
+      [ctx ex]
+      [{:exception-type :clojure.lang.ExceptionInfo 
+        :interceptor ::alloc-auth-permission-checker}]
+      (try
+        (unauthorized-fn ctx ex)
+        (catch Exception e
+          (assoc ctx ::interceptor.chain/error e)))
+      [{:exception-type :clojure.lang.ExceptionInfo 
+        :interceptor ::alloc-auth-access-rule-checker}]
+      (try
+        (unauthorized-fn ctx ex)
+        (catch Exception e
+          (assoc ctx ::interceptor.chain/error e)))
+      :else
+      (assoc ctx ::interceptor.chain/error ex))))
+</code></pre>
+<p>The function uses Pedestal&rsquo;s <code>error-dispatch</code> function to create an interceptor that can handle <code>ExceptionInfo</code> exceptions thrown by either the <code>::alloc-auth-permission-checker</code> or <code>::alloc-auth-access-rule-checker</code> interceptors.</p>
+<p>In the case of either exception, it will call the backend&rsquo;s <code>-handle-unauthorized</code> method (from the <code>IAuthorization</code> protocol implemented by the backend), which ultimately calls the <code>unauthorized-handler</code> function registered with the backend (see the notes on <code>alloc-auth-session-auth-backend</code> above).</p>
+<p>Any errors that cannot be handled, or throw exceptions during handling are reattached to the context map - potentially to be handled by another interceptor&rsquo;s <code>:error</code> function, or escaping at the top level with a <strong>5xx</strong> error being returned to the client.</p>
+<h3 id="the-alloc-auth-permission-checker-interceptor">The <code>:alloc-auth-permission-checker</code> interceptor</h3>
+<p>This interceptor checks whether the user&rsquo;s <strong>roles</strong> (embedded in the context map by <code>:alloc-auth-user-roles</code>) allow access to the requested uri. It is created by calling the <code>alloc-auth-permission-checker-interceptor-factory</code> function.</p>
+<pre><code class="language-clojure">(defn alloc-auth-permission-checker-interceptor-factory
+  []
+  (interceptor/interceptor
+    {:name  ::alloc-auth-permission-checker
+     :enter (fn [ctx]
+              (log/info
+                (str &quot;Checking Identity: &quot;
+                     (pr-str (get-in ctx [:request :identity :alloc-auth/user-id] :unauthenticated))
+                     &quot; for access to &quot;
+                     (pr-str (get-in ctx [:request :path-info]))
+                     &quot; with path params &quot;
+                     (pr-str (get-in ctx [:request :path-params]))
+                     &quot; for route name &quot;
+                     (pr-str (get-in ctx [:route :route-name]))
+                     &quot; with session &quot;
+                     (pr-str (get-in ctx [:request :session]))))
+              (let
+                [{req-path :path-info
+                  res-path-params :path-params
+                  {identity-user-id    :alloc-auth/user-id
+                   identity-token-type :alloc-auth/token-type
+                   identity-token      :alloc-auth/token
+                   user-session :alloc-auth/user-session} :identity}
+                 (get-in ctx [:request])
+                 {route-name        :route-name route-method :method
+                  route-path-re     :path-re route-path-parts :path-parts
+                  route-path-params :path-params}
+                 (get-in ctx [:route])
+                 {user :user roles :roles}
+                 (get-in ctx [:alloc-auth/auth])
+                 required-roles
+                 (get-in @alloc-auth-permissions [route-name :permissions :roles])]
+
+                (log/info
+                  (str &quot;User Roles: &quot;
+                       (pr-str roles)
+                       &quot; , required roles &quot;
+                       (pr-str required-roles)))
+
+                (if (and
+                      (not (contains? required-roles :public))
+                      (empty? (clojure.set/intersection
+                                roles required-roles)))
+                  (throw
+                    (ex-info &quot;Alloc-Unauthorized&quot;
+                             {:path     req-path :path-params res-path-params
+                              :user     user :roles roles :identity identity
+                              :required required-roles
+                              :user-session user-session}))
+                  (update-in
+                    ctx
+                    [:request]
+                    assoc :auth-alloc &quot;ok&quot;))))}))
+</code></pre>
+<p>If the <strong>roles</strong> associated with the user, and <code>assoc</code>-ed into the context map earlier as <code>:alloc-auth/auth</code> don&rsquo;t intersect with the <strong>roles</strong> required for access (stored in the <code>alloc-auth-permissions</code> atom) an <code>ex-info</code> exception is thrown. The exception will be handled by the <strong>error catcher</strong> interceptor which will return the appropriate response to the client.</p>
+<h3 id="the-alloc-auth-access-rule-checker-interceptor">The <code>:alloc-auth-access-rule-checker</code> interceptor</h3>
+<p>If the Pedestal interceptor chain which is built using <code>build-secured-route-vec-to</code> was passed a <code>:rules</code> parameter, this interceptor will run the rules&rsquo; handler functions to decide whether access to the resource should be granted (returns <code>success</code>) or denied (returns <code>error</code>).</p>
+<pre><code class="language-clojure">(defn alloc-auth-rules-checker-interceptor-factory
+  [rules]
+  (interceptor/interceptor
+    {:name  :alloc-auth-access-rule-checker
+     :enter (fn [context]
+              (let
+                [request (:request context)
+                 policy :allow
+                 w-a-rules-fn
+                 (auth.accessrules/wrap-access-rules
+                   (fn [req] :ok)
+                   {:rules rules :policy policy})]
+                (w-a-rules-fn request)
+                context))}))
+</code></pre>
+<p>The final security-related interceptor uses <code>buddy.auth.accessrules</code> to determine if access should be granted. <code>buddy.auth.accessrules</code> contains a <code>wrap-access-rules</code> function that is helpful in Ring&rsquo;s middleware context to wrap other Ring handlers. The interceptor uses this functionality by providing a <strong>synthetic</strong> handler that returns <code>:ok</code>. This works for our purposes, because the implementation of <code>wrap-access-rules</code> when <strong>called</strong> with a request will throw an exception if rules are violated for that request. This exception will be caught by the <strong>error catcher</strong> interceptor. If no exception is thrown, the interceptor returns unchanged the context map it received.</p>
+<h1 id="next-steps">Next Steps</h1>
+<p>Hopefully, if you&rsquo;ve been looking for guidance on how to integrate Buddy with Pedestal this document has helped. A later post will consider how one might provide a custom backend for Buddy.</p>
+
+    </div>
+
+    
+
+
+
+
+
+  
+  
+
+<p class="edit-page">
+  <a href="https://github.com/heykieran/timpson-gray-blog/edit/master/content/post/pedestal-buddy/index.md">
+    <i class="fas fa-pen pr-2"></i>Edit this page
+  </a>
+</p>
+
+
+
+
+
+<div class="article-tags">
+  
+  <a class="badge badge-light" href="/tag/authentiation/">authentiation</a>
+  
+  <a class="badge badge-light" href="/tag/authorization/">authorization</a>
+  
+  <a class="badge badge-light" href="/tag/buddy/">buddy</a>
+  
+  <a class="badge badge-light" href="/tag/clojure/">clojure</a>
+  
+  <a class="badge badge-light" href="/tag/pedestal/">pedestal</a>
+  
+  <a class="badge badge-light" href="/tag/security/">security</a>
+  
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    
+    
+
+
+
+
+
+  
+    
+    
+    
+      
+    
+    
+    
+    <div class="media author-card content-widget-hr">
+      
+        
+        <img class="avatar mr-3 avatar-circle" src="/author/kieran-owens/avatar_hu52a603635ecebd45650b162dadabb4e5_12861_270x270_fill_q90_lanczos_center.jpg" alt="Kieran Owens">
+      
+
+      <div class="media-body">
+        <h5 class="card-title"><a href="https://heykieran.github.io/">Kieran Owens</a></h5>
+        <h6 class="card-subtitle">CTO of Timpson Gray</h6>
+        <p class="card-text">Experienced Technology Leader with a particular interest in the use of functional languages for building accounting systems.</p>
+        <ul class="network-icon" aria-hidden="true">
+  
+    
+    
+    
+      
+    
+    
+    
+    
+    
+      
+    
+    <li>
+      <a href="https://twitter.com/heykieran" target="_blank" rel="noopener">
+        <i class="fab fa-twitter"></i>
+      </a>
+    </li>
+  
+    
+    
+    
+      
+    
+    
+    
+    
+    
+      
+    
+    <li>
+      <a href="https://github.com/heykieran" target="_blank" rel="noopener">
+        <i class="fab fa-github"></i>
+      </a>
+    </li>
+  
+</ul>
+
+      </div>
+    </div>
+  
+
+
+  
+
+
+
+
+
+<section id="comments">
+  
+    
+<div id="disqus_thread"></div>
+<script>
+  let disqus_config = function () {
+    
+    
+    
+  };
+  (function() {
+    if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+      document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+      return;
+    }
+    var d = document, s = d.createElement('script'); s.async = true;
+    s.src = 'https://' + "heykieran" + '.disqus.com/embed.js';
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+
+  
+</section>
+
+
+
+
+
+
+  
+  
+  <div class="article-widget content-widget-hr">
+    <h3>Related</h3>
+    <ul>
+      
+      <li><a href="/post/pedestal-and-google/">Pedestal API, ClojureScript SPA and Google Authentication</a></li>
+      
+      <li><a href="/post/deploy-pedestal-react-to-docker/">Deploy a Clojure Pedestal API Server &amp; React/ClojureScript Web Application to Docker</a></li>
+      
+      <li><a href="/post/pedestal-jetty-https/">Setting-up Pedestal/Jetty with HTTPS</a></li>
+      
+      <li><a href="/post/deploy-to-kubernetes-gke/">Deploy a Clojure Web Application to Kubernetes (GKE)</a></li>
+      
+      <li><a href="/post/clojure-configuration/">Clojure Configurations with Docker Secrets</a></li>
+      
+    </ul>
+  </div>
+  
+
+
+
+
+  </div>
+</article>
+
+      
+
+    
+    
+    
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/4.1.4/imagesloaded.pkgd.min.js" integrity="sha256-lqvxZrPLtfffUl2G/e7szqSvPBILGbwmsGE1MKlOi0Q=" crossorigin="anonymous"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.isotope/3.0.6/isotope.pkgd.min.js" integrity="sha256-CBrpuqrMhXwcLLUd5tvQ4euBHCdh7wGlDfNz8vbu/iI=" crossorigin="anonymous"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+
+      
+
+      
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js" integrity="sha256-eOgo0OtLL4cdq7RdwRUiGKLX9XsIJ7nGhWEKbohmVAQ=" crossorigin="anonymous"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/r.min.js"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/clojure.min.js"></script>
+        
+      
+
+    
+
+    
+    
+
+    
+    
+    <script>const code_highlighting = true;</script>
+    
+
+    
+    
+    <script>const isSiteThemeDark = false;</script>
+    
+
+    
+    
+    
+    
+    
+    
+    <script>
+      const search_config = {"indexURI":"/index.json","minLength":1,"threshold":0.3};
+      const i18n = {"no_results":"No results found","placeholder":"Search...","results":"results found"};
+      const content_type = {
+        'post': "Posts",
+        'project': "Projects",
+        'publication' : "Publications",
+        'talk' : "Talks",
+        'slides' : "Slides"
+        };
+    </script>
+    
+
+    
+    
+
+    
+    
+    <script id="search-hit-fuse-template" type="text/x-template">
+      <div class="search-hit" id="summary-{{key}}">
+      <div class="search-hit-content">
+        <div class="search-hit-name">
+          <a href="{{relpermalink}}">{{title}}</a>
+          <div class="article-metadata search-hit-type">{{type}}</div>
+          <p class="search-hit-description">{{snippet}}</p>
+        </div>
+      </div>
+      </div>
+    </script>
+    
+
+    
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/3.2.1/fuse.min.js" integrity="sha256-VzgmKYmhsGNNN4Ph1kMW+BjoYJM2jV5i4IlFoeZA9XI=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/jquery.mark.min.js" integrity="sha256-4HLtjeVgH0eIB3aZ9mLYF6E8oU5chNdjU6p6rrXpl9U=" crossorigin="anonymous"></script>
+    
+
+    
+    
+
+    
+    
+
+    
+    
+    <script id="dsq-count-scr" src="https://heykieran.disqus.com/count.js" async></script>
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+      
+    
+    
+    
+    
+    <script src="/js/academic.min.37431be2d92d7fb0160054761ab79602.js"></script>
+
+    
+
+
+
+
+
+
+  
+  
+  <div class="container">
+    <footer class="site-footer">
+  
+
+  <p class="powered-by">
+    © Kieran J. Owens 2020
+  </p>
+
+  
+  
+
+
+
+
+
+
+  <p class="powered-by">
+    Powered by the
+    <a href="https://sourcethemes.com/academic/" target="_blank" rel="noopener">Academic theme</a> for
+    <a href="https://gohugo.io" target="_blank" rel="noopener">Hugo</a>.
+
+    
+    <span class="float-right" aria-hidden="true">
+      <a href="#" class="back-to-top">
+        <span class="button_icon">
+          <i class="fas fa-chevron-up fa-2x"></i>
+        </span>
+      </a>
+    </span>
+    
+  </p>
+</footer>
+
+  </div>
+  
+
+  
+<div id="modal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Cite</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <pre><code class="tex hljs"></code></pre>
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-outline-primary my-1 js-copy-cite" href="#" target="_blank">
+          <i class="fas fa-copy"></i> Copy
+        </a>
+        <a class="btn btn-outline-primary my-1 js-download-cite" href="#" target="_blank">
+          <i class="fas fa-download"></i> Download
+        </a>
+        <div id="modal-error"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

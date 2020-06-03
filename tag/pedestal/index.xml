@@ -5,12 +5,388 @@
     <link>https://heykieran.github.io/tag/pedestal/</link>
       <atom:link href="https://heykieran.github.io/tag/pedestal/index.xml" rel="self" type="application/rss+xml" />
     <description>pedestal</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Thu, 07 May 2020 12:10:26 -0400</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Wed, 03 Jun 2020 12:40:00 +0000</lastBuildDate>
     <image>
       <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png</url>
       <title>pedestal</title>
       <link>https://heykieran.github.io/tag/pedestal/</link>
     </image>
+    
+    <item>
+      <title>Pedestal, Buddy and Security</title>
+      <link>https://heykieran.github.io/post/pedestal-buddy/</link>
+      <pubDate>Wed, 03 Jun 2020 12:40:00 +0000</pubDate>
+      <guid>https://heykieran.github.io/post/pedestal-buddy/</guid>
+      <description>&lt;h1 id=&#34;introduction&#34;&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;In this piece I show how to integrate 
+&lt;a href=&#34;https://funcool.github.io/buddy-auth/latest/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Buddy&amp;rsquo;s&lt;/a&gt; authentication and authorization functionality with a 
+&lt;a href=&#34;http://pedestal.io/index&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Pedestal&lt;/a&gt; web application.&lt;/p&gt;
+&lt;p&gt;I provide a brief overview of Pedestal&amp;rsquo;s interceptor model, particularly error-handling, which we&amp;rsquo;ll use to catch and handle any authentication or authorization errors thrown by Buddy.&lt;/p&gt;
+&lt;p&gt;I also cover some of Buddy&amp;rsquo;s available functionality; how to decide if access to a web resource should be allowed; and how to respond to the requesting client when access is denied.&lt;/p&gt;
+&lt;h2 id=&#34;whats-not-covered&#34;&gt;What&amp;rsquo;s not covered?&lt;/h2&gt;
+&lt;p&gt;For the purpose of this discussion, there is an assumption that the application is using session-based security. However, there is no discussion of how the user session is &lt;strong&gt;actually&lt;/strong&gt; populated for use by Pedestal and Buddy.&lt;/p&gt;
+&lt;p&gt;This is an important topic and if you want to learn more about how to manage the login and session population processes, you can review the following 
+&lt;a href=&#34;https://heykieran.github.io/post/pedestal-and-google/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;blog post&lt;/a&gt;, where I&amp;rsquo;ve covered it more fully, or the source code for the application available on 
+&lt;a href=&#34;https://github.com/heykieran/clj-pedestal-google&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;GitHub&lt;/a&gt;.&lt;/p&gt;
+&lt;h1 id=&#34;the-web-application&#34;&gt;The Web Application&lt;/h1&gt;
+&lt;p&gt;The web application will proceed through the following steps:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The user requests a resource located at a URL on the server&lt;/li&gt;
+&lt;li&gt;The application identifies &amp;amp; authenticates the user&lt;/li&gt;
+&lt;li&gt;The application determines the valid role(s) for the user&lt;/li&gt;
+&lt;li&gt;The application determines if the user&amp;rsquo;s role(s) permit access to the resource&lt;/li&gt;
+&lt;li&gt;The application either serves the resource &lt;strong&gt;or&lt;/strong&gt; returns an access-denied response.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Initially, I elide certain details, such as how the user asserts an identity, but return to them later in the piece.&lt;/p&gt;
+&lt;h1 id=&#34;pedestal&#34;&gt;Pedestal&lt;/h1&gt;
+&lt;p&gt;Pedestal is a set of libraries developed by the team at Cognitect to facilitate the creation of web applications in Clojure. It uses the &lt;em&gt;interceptor&lt;/em&gt; pattern, which differs from the handler/middleware pattern adopted by Ring.&lt;/p&gt;
+&lt;p&gt;Oversimplifed, but adequate for our purposes, a Pedestal application is a &lt;em&gt;chain&lt;/em&gt; of interceptors with each interceptor being an entity with an &lt;code&gt;:enter&lt;/code&gt; function, a &lt;code&gt;:leave&lt;/code&gt; function, and an &lt;code&gt;:error&lt;/code&gt; function. The web-server receives a request, bundles it into a &lt;em&gt;context&lt;/em&gt; (a map) and then threads that context through each interceptor, which has an opportunity to change it, producing a final context which is marshalled into an HTTP response and returned to the requesting client.&lt;/p&gt;
+&lt;p&gt;The chaining logic through the interceptors is &lt;em&gt;two-pass&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;If we consider a chain of interceptors &lt;strong&gt;I1&lt;/strong&gt;, &lt;strong&gt;I2&lt;/strong&gt; and &lt;strong&gt;I3&lt;/strong&gt;: Pedestal will push the context through &lt;strong&gt;I1&lt;/strong&gt;, then &lt;strong&gt;I2&lt;/strong&gt; and then &lt;strong&gt;I3&lt;/strong&gt;. It will then pull the context back through the chain in reverse order i.e. &lt;strong&gt;I3&lt;/strong&gt;, then &lt;strong&gt;I2&lt;/strong&gt;, and finally &lt;strong&gt;I1&lt;/strong&gt;. In the &lt;em&gt;push&lt;/em&gt; phase each interceptor&amp;rsquo;s &lt;code&gt;:enter&lt;/code&gt; function will be called with the context as its argument, and the return value (also a context) will be passed to the next interceptor&amp;rsquo;s &lt;code&gt;:enter&lt;/code&gt; function. During the &lt;em&gt;pull&lt;/em&gt; phase, each interceptor&amp;rsquo;s &lt;code&gt;:leave&lt;/code&gt; function will be called. As with the &lt;em&gt;push&lt;/em&gt; phase, each interceptor&amp;rsquo;s &lt;code&gt;:leave&lt;/code&gt; function will receive the context as its argument and is expected to return a context which is passed to the next interceptor.&lt;/p&gt;
+&lt;div class=&#34;alert alert-note&#34;&gt;
+  &lt;div&gt;
+    &lt;p&gt;In the discussion above, I&amp;rsquo;ve stated that an interceptor function receives a context and returns a context. This is conceptually correct, but obscures one of Pedestal&amp;rsquo;s useful features.&lt;/p&gt;
+&lt;p&gt;An interceptor function can also return a &lt;code&gt;core.async&lt;/code&gt; channel. When this happens, Pedestal will yield the thread, allowing other activity to occur, and will recommence when a value is available on the channel. When that happens, Pedestal will read &lt;strong&gt;one&lt;/strong&gt; value from the channel (which &lt;strong&gt;must&lt;/strong&gt; be a context) and continue processing the chain.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;p&gt;Although it&amp;rsquo;s not particularly relevant to our current discussion, it&amp;rsquo;s important to note that the interceptor chain is not &lt;strong&gt;fixed&lt;/strong&gt; in any general sense. An interceptor, within the context it receives, has access to the chain itself and can manipulate it.&lt;/p&gt;
+&lt;p&gt;What &lt;strong&gt;is&lt;/strong&gt; relevant is how the Pedestal interceptor chain handles errors and exceptions. Although the Pedestal interceptor call sequence is analagous to a function call stack, the calls do not exist in that nested manner on the JVM call stack. Therefore, it&amp;rsquo;s not possible to use Clojure&amp;rsquo;s try/catch mechanism to catch exceptions thrown by one interceptor in a different interceptor further up the stack.&lt;/p&gt;
+&lt;p&gt;The Pedestal &lt;em&gt;machinery&lt;/em&gt; catches any exception thrown by an interceptor, wraps it in an &lt;code&gt;ExceptionInfo&lt;/code&gt; instance and associates the instance into the context map with the key &lt;code&gt;:io.pedestal.interceptor.chain/error&lt;/code&gt;. Pedestal then back tracks through the interceptor chain looking for an interceptor with an &lt;code&gt;:error&lt;/code&gt; function that can handle the exception.&lt;/p&gt;
+&lt;p&gt;Each &lt;code&gt;:error&lt;/code&gt; function is called with two arguments, the context (without the &lt;code&gt;:io.pedestal.interceptor.chain/error&lt;/code&gt; key) and the &lt;code&gt;ExceptionInfo&lt;/code&gt; instance. If an interceptor&amp;rsquo;s &lt;code&gt;:error&lt;/code&gt; function can handle the error the interceptor should return a context. In that case, Pedestal will continue processing the remaining interceptor&amp;rsquo;s &lt;code&gt;:leave&lt;/code&gt; functions and ultimately return a response to the client.&lt;/p&gt;
+&lt;p&gt;If an interceptor&amp;rsquo;s &lt;code&gt;:error&lt;/code&gt; function cannot handle the exception it should reattach the &lt;code&gt;ExceptionInfo&lt;/code&gt; instance it received to the context (as &lt;code&gt;:io.pedestal.interceptor.chain/error&lt;/code&gt;) and return the new updated context. This allows Pedestal to continue searching for an appropriate handler.&lt;/p&gt;
+&lt;p&gt;During Pedestal&amp;rsquo;s exception handling process no &lt;code&gt;:enter&lt;/code&gt; or &lt;code&gt;:leave&lt;/code&gt; functions will be called while the context map contains a &lt;code&gt;:io.pedestal.interceptor.chain/error&lt;/code&gt; entry.&lt;/p&gt;
+&lt;h1 id=&#34;buddy&#34;&gt;Buddy&lt;/h1&gt;
+&lt;p&gt;
+&lt;a href=&#34;https://funcool.github.io/buddy-auth/latest/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Buddy&lt;/a&gt; is a Clojure library providing authentication and authorization facilites to web applications. Although its documentation is primarily focused on ring based applications, the library itself is flexible enough to be used with just about any Clojure web-application library including Pedestal.&lt;/p&gt;
+&lt;p&gt;Buddy treats authentication and authorization as independent concerns. Authentication decides who you are, and authorization determines what you can do. I discuss authentication first, and return to the topic of authorization.&lt;/p&gt;
+&lt;p&gt;Within Buddy there are available many mechanisms to authenticate the user, and Buddy refers to these machanisms as &lt;em&gt;backends&lt;/em&gt;. The two we will discuss in greater detail below are &lt;strong&gt;session&lt;/strong&gt; and (in a different blog post) &lt;strong&gt;jws&lt;/strong&gt; (signed JWT).&lt;/p&gt;
+&lt;p&gt;Conceptually, for all backends, Buddy&amp;rsquo;s authentication functionality is extremely simple. It occurs in two phases: a &lt;strong&gt;parse&lt;/strong&gt; phase, and an &lt;strong&gt;auth&lt;/strong&gt; phase&lt;/p&gt;
+&lt;h2 id=&#34;parse-phase&#34;&gt;Parse Phase&lt;/h2&gt;
+&lt;p&gt;During the &lt;strong&gt;parse&lt;/strong&gt; phase the backend takes the http request (for example, contained in Pedestal&amp;rsquo;s context map) and extracts from it any values required by the backend&amp;rsquo;s &lt;strong&gt;auth&lt;/strong&gt; phase. These values could be in the request&amp;rsquo;s headers, session, query params etc; it depends on the backend. If the parsing of the request returns nothing (&lt;code&gt;nil&lt;/code&gt;/&lt;code&gt;false&lt;/code&gt;) then further processing by Buddy stops and the auth phase is not entered - the request (and the requestor) is considered &lt;code&gt;unauthenticated&lt;/code&gt;. Otherwise, the relevant values from parsing are passed to the &lt;strong&gt;auth&lt;/strong&gt; phase.&lt;/p&gt;
+&lt;h2 id=&#34;auth-phase&#34;&gt;Auth Phase&lt;/h2&gt;
+&lt;p&gt;During the &lt;strong&gt;auth&lt;/strong&gt; phase, the values returned by the &lt;strong&gt;parse&lt;/strong&gt; phase are used to determine the identity of the user. This involves calling the backend&amp;rsquo;s authentication function (&lt;code&gt;auth-fn&lt;/code&gt;) with those values. If the &lt;code&gt;auth-fn&lt;/code&gt; returns a non-nil, non-false value then the request map&amp;rsquo;s &lt;code&gt;:identity&lt;/code&gt; key is set to that value. This value represents an authenticated user. As with parsing, how authentication is done depends on the backend in use. Possibly, it&amp;rsquo;s an extraction of a session identifier followed by a database lookup, or even a decryption and verification of a signed JWT that was parsed from the request&amp;rsquo;s headers.&lt;/p&gt;
+&lt;p&gt;Buddy provides a number of backend, but you&amp;rsquo;re also free to define your own if they do not meet your needs.&lt;/p&gt;
+&lt;h1 id=&#34;review-of-application&#34;&gt;Review of Application&lt;/h1&gt;
+&lt;p&gt;Considering what we know about interceptors and Buddy, we can now sketch out an approach to securing the application, and then its implementation using Pedestal interceptors.&lt;/p&gt;
+&lt;h2 id=&#34;the-security-model&#34;&gt;The Security Model&lt;/h2&gt;
+&lt;h3 id=&#34;user&#34;&gt;User&lt;/h3&gt;
+&lt;p&gt;The basic entity is the &lt;strong&gt;user&lt;/strong&gt;. A &lt;strong&gt;user&lt;/strong&gt; can be associated with one or more email addresses. At a later stage this will allow the application use a variety of external identity providers, such as Google, Facebook, Azure etc. Obviously, an email address can be associated with &lt;strong&gt;only&lt;/strong&gt; one application &lt;strong&gt;user&lt;/strong&gt; entity.&lt;/p&gt;
+&lt;h3 id=&#34;role&#34;&gt;Role&lt;/h3&gt;
+&lt;p&gt;A &lt;strong&gt;user&lt;/strong&gt; can also be assigned to one or more &lt;strong&gt;roles&lt;/strong&gt;. &lt;strong&gt;Roles&lt;/strong&gt; determine a &lt;strong&gt;user&amp;rsquo;s&lt;/strong&gt; permissions within the web application. &lt;strong&gt;Roles&lt;/strong&gt; exist independently of each other and within a &lt;em&gt;flat&lt;/em&gt; structure. There are no concepts of hierarchy and inheritance.&lt;/p&gt;
+&lt;h3 id=&#34;route&#34;&gt;Route&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;Roles&lt;/strong&gt; are granted (or denied) HTTP &lt;em&gt;verb&lt;/em&gt; access to individual &lt;strong&gt;uri&amp;rsquo;s&lt;/strong&gt; which are represented in the Pedestal world as &lt;strong&gt;routes&lt;/strong&gt;. A &lt;strong&gt;route&lt;/strong&gt; may also be &lt;em&gt;unprotected&lt;/em&gt; meaning that its uri is accessible to unauthenticated users (i.e. the public).&lt;/p&gt;
+&lt;p&gt;There are two ways to allow &lt;em&gt;unprotected&lt;/em&gt; access to a resource&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Do not use interceptors that manage or restrict access based on identity and permissions. (These interceptors are established for a &lt;strong&gt;route&lt;/strong&gt; with the &lt;code&gt;build-secured-route-vec-to&lt;/code&gt; function, which is dicussed in greater detail below).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Name the route using a value in the &lt;code&gt;:alloc-public&lt;/code&gt; namespace (see note below on how the &lt;strong&gt;permissions&lt;/strong&gt; lookup table is populated).&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&#34;example&#34;&gt;Example&lt;/h3&gt;
+&lt;p&gt;The following code fragment defines three routes&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(def routes
+  (route/expand-routes
+    #{[&amp;quot;/&amp;quot; :get landing-page :route-name :landing-page]
+      [&amp;quot;/api/htest&amp;quot; :get (build-secured-route-vec-to test-response) 
+        :route-name :alloc-user/auth-test-response-get]
+      [&amp;quot;/api/htest&amp;quot; :post (build-secured-route-vec-to test-response)
+       :route-name :alloc-admin/auth-test-response-post]}))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Each vector in the set passed to &lt;code&gt;expand-route&lt;/code&gt;, contains a uri pattern, a method, an interceptor (or vector of interceptors) and a &lt;code&gt;:route-name&lt;/code&gt; key with its associated value. The application will use the namespace of the route name to build a &lt;strong&gt;permission&lt;/strong&gt; table linking a uri to a &lt;strong&gt;role&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;In the fragment above the path &lt;code&gt;/&lt;/code&gt; is available to any user (including unauthenticated users) as the only active interceptor is the &lt;code&gt;landing-page&lt;/code&gt; interceptor, which uses no authentication.&lt;/p&gt;
+&lt;p&gt;The ability to &lt;code&gt;GET&lt;/code&gt; from &lt;code&gt;/api/htest&lt;/code&gt; is restricted to &lt;strong&gt;users&lt;/strong&gt; with the &lt;code&gt;:user&lt;/code&gt; &lt;strong&gt;role&lt;/strong&gt;, and the ability to &lt;code&gt;POST&lt;/code&gt; to the uri is restricted to &lt;strong&gt;users&lt;/strong&gt; with the &lt;code&gt;:admin&lt;/code&gt; &lt;strong&gt;role&lt;/strong&gt;. This is ensured because the &lt;code&gt;build-secured-route-vec-to&lt;/code&gt; function inserts the necessary authentication and permission checking interceptors into the uri&amp;rsquo;s interceptor chain before the &lt;code&gt;test-response&lt;/code&gt; handler/interceptor.&lt;/p&gt;
+&lt;p&gt;This approach is helpful as Pedestal, when seeing a &lt;em&gt;pure&lt;/em&gt; handler function as the last entry in an interceptor vector, will convert it to an interceptor. (A &lt;em&gt;pure&lt;/em&gt; handler function is a single arity function taking a &lt;code&gt;request&lt;/code&gt; as its argument). This means that a handler function can be fully exercised in the REPL before attempting to secure it.&lt;/p&gt;
+&lt;p&gt;Using the information encoded in the &lt;strong&gt;routes&lt;/strong&gt;, the &lt;strong&gt;permission&lt;/strong&gt; table will be constructed by the application at runtime and is used by the interceptor responsible for checking permissions that the authenticated user is in a &lt;strong&gt;role&lt;/strong&gt; required to access the resource.&lt;/p&gt;
+&lt;h2 id=&#34;the-interceptor-chain&#34;&gt;The Interceptor Chain&lt;/h2&gt;
+&lt;p&gt;Now, a consideration of the interceptor chain built by the &lt;code&gt;build-secured-route-vec-to&lt;/code&gt; function. This function taking as its first argument an interceptor (or handler function) will return a vector of interceptors appropriate for the dual functions of authenticating the &lt;strong&gt;user&lt;/strong&gt; and authorizing his/her access to the resource (uri). The function also accepts a number of other options, which we will return to later.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;The first interceptor in the security-related portion of the interceptor chain attempts to authenticate the user. It is provided a context map, and will update the &lt;code&gt;:request&lt;/code&gt; portion of the context map using the &lt;code&gt;buddy.auth.middleware/authentication-request&lt;/code&gt; function.
+This function takes as parameters the request, and the backend. It will populate the &lt;code&gt;:identity&lt;/code&gt; key of the request map if authentication suceeds (as determined by the backend). If the authentication fails the backend&amp;rsquo;s &lt;code&gt;:unauthorized-handler&lt;/code&gt; is called. This returns a 401 response to the client.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;The next interceptor retrieves the &lt;code&gt;:identity&lt;/code&gt; from the the context&amp;rsquo;s &lt;code&gt;:request&lt;/code&gt; map and looks up the roles associated with the user. It attaches the information retrieved to the context map using the key &lt;code&gt;:alloc-auth/auth&lt;/code&gt;. The value added will be a map with two keys &lt;code&gt;:user&lt;/code&gt; and &lt;code&gt;:roles&lt;/code&gt;. By attaching this information to the context map, it becomes available for interceptors later in the chain.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Then the &lt;em&gt;&lt;strong&gt;error catching&lt;/strong&gt;&lt;/em&gt; interceptor (created by the function &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt;) is entered. It returns the received context map unchanged. It&amp;rsquo;s only responsibility is to handle exceptions that might be thrown later by the interceptors named &lt;code&gt;:alloc-auth-permission-checker&lt;/code&gt; and &lt;code&gt;:alloc-auth-access-rule-checker&lt;/code&gt;. These two interceptors in turn check the user&amp;rsquo;s access to a resource (uri) based on his/her assigned roles; and checks his/her access based on custom defined rules. (I provide a expanded description of both below.)&lt;/p&gt;
+&lt;div class=&#34;alert alert-note&#34;&gt;
+&lt;div&gt;
+  A benefit of using a single &lt;em&gt;error catching&lt;/em&gt; interceptor is that there is a consolidation of application responses in a single area of the code rather than having them spread throughout the code in other interceptors&amp;rsquo; &lt;code&gt;:error&lt;/code&gt; functions. Also, the interceptor is created by the &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt; function which takes a &lt;em&gt;backend&lt;/em&gt; as a parameter. This parameter is &lt;em&gt;closed over&lt;/em&gt; by the function. Therefore, in addition to the consistency of responses mentioned above, it also ensures that the backend is fully &lt;em&gt;swappable&lt;/em&gt; and can be changed without impacting other areas of the code.
+&lt;/div&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;The next interceptor in the chain (&lt;code&gt;:alloc-auth-permission-checker&lt;/code&gt;) extracts the &lt;code&gt;:alloc-auth/auth&lt;/code&gt; value from the context map and compares its &lt;code&gt;:roles&lt;/code&gt; value against the roles required to access the resource using the &lt;strong&gt;permissions&lt;/strong&gt; table. If the comparison fails to find a match between the user&amp;rsquo;s assigned roles and the roles required to access the resource, the interceptor will throw an &amp;ldquo;Alloc-Unauthorized&amp;rdquo; exception. This will cause Pedestal to start looking for a handler, finding it in the &lt;em&gt;&lt;strong&gt;error catching&lt;/strong&gt;&lt;/em&gt; interceptor (see above), which ultimately returns a 401 or 403 response to the client.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;If the request has gotten this far, then the user is &lt;em&gt;superficially&lt;/em&gt; allowed to access the resource (by HTTP &lt;em&gt;verb&lt;/em&gt; and uri), but there may be other, &lt;em&gt;finer&lt;/em&gt; restrictions to be considered. The final interceptor related to security is now entered (&lt;code&gt;:alloc-auth-access-rule-checker&lt;/code&gt;). It takes the context map&amp;rsquo;s &lt;code&gt;:request&lt;/code&gt; value and runs a set of rules against it using functions in the &lt;code&gt;buddy.auth.accessrules&lt;/code&gt; namespace. If these rules result in a &lt;code&gt;success&lt;/code&gt; the resource is returned to the client; if not, an exception is thrown, which is again handled by the &lt;em&gt;&lt;strong&gt;error catching&lt;/strong&gt;&lt;/em&gt; interceptor. This will return a 401 or 403 response to the client as appropriate.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;access-rules&#34;&gt;Access Rules&lt;/h2&gt;
+&lt;p&gt;Access rules are helpful when an application developer want to allow access to a &lt;strong&gt;route&lt;/strong&gt; only under certain circumstances; circumstances that cannot be encoded in a &lt;strong&gt;route&lt;/strong&gt;&amp;lsquo;s uri pattern. As a trivial example, consider the situation where the developer wants to grant access to a uri pattern &lt;code&gt;/api/dostuff/:id&lt;/code&gt; between 9:00AM and 5:00PM only.&lt;/p&gt;
+&lt;p&gt;A way to achieve this is to use an &lt;strong&gt;access rule&lt;/strong&gt; defined according to the convention required by &lt;code&gt;buddy.auth.accessrules&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Such a rule can be expressed as follows&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(def rule-1
+  [{:uri &amp;quot;/api/dostuff/:id&amp;quot;
+    :handler
+         (fn [request]
+           (let
+             [d (time/local-date) n (time/local-date-time)]
+             (if (time/before?
+               (time/local-date-time (str d &amp;quot;T09:00:00&amp;quot;))
+               n
+               (time/local-date-time (str d &amp;quot;T17:00:00&amp;quot;)))
+                 (buddy.auth.accessrules/success)
+                 (buddy.auth.accessrules/error))))}])
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If it was required that the &lt;strong&gt;role&lt;/strong&gt; should be granted access during those hours only, and when the &lt;code&gt;:id&lt;/code&gt; parameter is equal to &amp;ldquo;&lt;code&gt;company1&lt;/code&gt;&amp;rdquo; the rule would be&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(def rule1
+  [{:uri &amp;quot;/api/dostuff/:id&amp;quot;
+    :handler
+         (fn [request]
+           (let
+             [{company-id :id}
+              (-&amp;gt; request :match-params)
+              user-identity (-&amp;gt; request :identity)
+              auth? (buddy.auth/authenticated? request)
+              uri (-&amp;gt; request :uri)
+              d (time/local-date)
+              n (time/local-date-time)]
+             (if (and
+                   (= company-id &amp;quot;company1&amp;quot;)
+                   (time/before?
+                     (time/local-date-time (str d &amp;quot;T09:00:00&amp;quot;))
+                     n
+                     (time/local-date-time (str d &amp;quot;T17:00:00&amp;quot;))))
+               (buddy.auth.accessrules/success)
+               (buddy.auth.accessrules/error))))}])
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Because, &lt;code&gt;buddy-auth&lt;/code&gt; attaches the user&amp;rsquo;s identity to the &lt;code&gt;request&lt;/code&gt; map in the context map, it can be retrived and used during the processing of an access rule. Also, any path params extracted from the uri will be available in the handler function in the &lt;code&gt;request&lt;/code&gt; map&amp;rsquo;s &lt;code&gt;:path-params&lt;/code&gt; field.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;When a rule returns &lt;code&gt;error&lt;/code&gt; it results in an unauthorized exception being raised by the backend. This exception is caught in the &lt;em&gt;&lt;strong&gt;error catching&lt;/strong&gt;&lt;/em&gt; interceptor as before.&lt;/p&gt;
+&lt;h1 id=&#34;buddy-backends&#34;&gt;Buddy Backends&lt;/h1&gt;
+&lt;p&gt;As previously mentioned, a backend is responsible for providing a function (&lt;code&gt;authfn&lt;/code&gt;) that can authenticate a user, a function (&lt;code&gt;unauthorized-handler&lt;/code&gt;) responsible for handling authentication and authorization failures, and possibly a function (&lt;code&gt;on-error&lt;/code&gt;) to handle errors.&lt;/p&gt;
+&lt;p&gt;Internally, a backend is an instance of an object that implements two protocols defined in the &lt;code&gt;buddy.auth.protocols&lt;/code&gt; namespace, namely &lt;code&gt;IAuthentication&lt;/code&gt; and &lt;code&gt;IAuthorization&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;IAuthentication&lt;/code&gt; protocol must provide the &lt;code&gt;-parse&lt;/code&gt; method, a function to extract any required information from the suplied request; and the &lt;code&gt;-authenticate&lt;/code&gt; method, a function to authenticate the user. The &lt;code&gt;-authenticate&lt;/code&gt; method will call the &lt;code&gt;authfn&lt;/code&gt; function passed when the backend is created in the application.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;IAuthorization&lt;/code&gt; protocol must provide the &lt;code&gt;-handle-unauthorized&lt;/code&gt; method which will call the &lt;code&gt;unauthorized-handler&lt;/code&gt; function with the request map and a metadata argument describing the failure.&lt;/p&gt;
+&lt;p&gt;Fortunately, &lt;code&gt;buddy-auth&lt;/code&gt; comes with a number of built-in backends.&lt;/p&gt;
+&lt;h2 id=&#34;the-session-back-end&#34;&gt;The Session Back-End&lt;/h2&gt;
+&lt;p&gt;One of the back-ends provided by Buddy is &lt;code&gt;session&lt;/code&gt;, which relies on ring&amp;rsquo;s 
+&lt;a href=&#34;https://ring-clojure.github.io/ring/ring.middleware.session.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;session&lt;/a&gt; support. During the parse phase, the request&amp;rsquo;s session map is inspected for an &lt;code&gt;:identity&lt;/code&gt; key. If that key exists it&amp;rsquo;s passed to the auth phase, which simply sets the request map&amp;rsquo;s &lt;code&gt;:identity&lt;/code&gt; key to that value. It&amp;rsquo;s really that simple.&lt;/p&gt;
+&lt;p&gt;If you use sessions there are a number of security implications that you should consider. First, although the complete session information exists only on the server, the session&amp;rsquo;s identifier is passed back and forth between the client and the server, and despite some of the security mechanisms employed by browsers (and user agents, more generally), and the cookie-based session functionality provided by ring you will need to be careful.&lt;/p&gt;
+&lt;p&gt;You should only use https. This ensures that the information passed between the client and the server is encryped in transit. Also, cookies should be set to &lt;code&gt;Secure&lt;/code&gt;. Also, you should consider strongly the use of &lt;code&gt;HttpOnly&lt;/code&gt; and &lt;code&gt;SameSite&lt;/code&gt;. 
+&lt;a href=&#34;https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;OWASP&lt;/a&gt; provides some very good information regarding session security, and you should review it.&lt;/p&gt;
+&lt;h2 id=&#34;using-ring-session-middleware-with-pedestal&#34;&gt;Using Ring Session Middleware with Pedestal&lt;/h2&gt;
+&lt;p&gt;Because of the fundamental differences between Pedestal&amp;rsquo;s interceptor model and Ring&amp;rsquo;s wrapped middleware model, Pedestal provides in its &lt;code&gt;io.pedestal.http.ring-middlewares&lt;/code&gt; namespace an ability to adapt a Ring middleware function to an interceptor context. Conveniently, the namespace also provides a function (&lt;code&gt;session&lt;/code&gt;) which does this specifically for adapting Ring&amp;rsquo;s session middleware. We only need to include the interceptor returned by this function in our interceptor chain to make use of Ring sessions in our Pedestal application.&lt;/p&gt;
+&lt;h2 id=&#34;using-buddys-session-back-end-with-pedestal&#34;&gt;Using Buddy&amp;rsquo;s session back-end with Pedestal&lt;/h2&gt;
+&lt;p&gt;Buddy provides an implementation of the &lt;code&gt;session&lt;/code&gt; back-end in the &lt;code&gt;buddy.auth.backends&lt;/code&gt; namespace and it can be instantiated using the &lt;code&gt;buddy.auth.backends/session&lt;/code&gt; function. This function can also accept an options map containing &lt;code&gt;:authfn&lt;/code&gt; and &lt;code&gt;:unauthorized-handler&lt;/code&gt; keys, which if supplied are expected to be functions that handle authentication and what to do when a request is not authorized respectively. If neither is supplied, Buddy will supply sensible defaults.&lt;/p&gt;
+&lt;p&gt;For our purposes, the default &lt;code&gt;:authfn&lt;/code&gt; function will suffice, but because we will later have to handle authorization we will provide our own &lt;code&gt;:unauthorized-handler&lt;/code&gt; function.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;
+(def alloc-auth-session-auth-backend
+  (auth.backends/session
+    {:unauthorized-handler
+     (fn unauthorized-handler
+       [request metadata]
+       (let [{user         :user roles :roles required :required
+              user-session :user-session}
+             (get-in metadata [:details :request])
+             error-message
+             (str &amp;quot;NOT AUTHORIZED (SESSION): In unauthenticated handler for &amp;quot;
+                  &amp;quot;uri: &amp;quot; (pr-str (:uri request)) &amp;quot;, &amp;quot;
+                  &amp;quot;and path-params &amp;quot;
+                  (pr-str (:path-params request)) &amp;quot;. &amp;quot;
+                  &amp;quot;user: &amp;quot; (pr-str user) &amp;quot;, &amp;quot;
+                  &amp;quot; roles: &amp;quot; (pr-str roles) &amp;quot;. &amp;quot;
+                  &amp;quot;required: &amp;quot; (pr-str required) &amp;quot;. &amp;quot;
+                  &amp;quot;user-session: &amp;quot; (pr-str user-session) &amp;quot;.&amp;quot;)]
+         (if user-session
+           (rlog/with-forward-context
+             user-session
+             (log/error
+               error-message))
+           (log/error
+             error-message)))
+       (cond
+         ;; If request is authenticated, raise 403 instead
+         ;; of 401 (because user is authenticated but permission
+         ;; denied is raised).
+         (auth/authenticated? request)
+         (-&amp;gt; (ring-response/response
+               {:reason
+                (str &amp;quot;Authenticated, but not authorized for access to .\n&amp;quot;
+                     &amp;quot;Metadata : &amp;quot; (pr-str metadata))})
+             (assoc :status 403))
+         ;; In other cases, respond with a 401.
+         :else
+         (let [current-url (:uri request)]
+           (-&amp;gt;
+             (ring-response/response
+               {:reason &amp;quot;Unauthorized&amp;quot;})
+             (assoc :status 401)
+             (ring-response/header &amp;quot;WWW-Authenticate&amp;quot; &amp;quot;tg-auth, type=1&amp;quot;)))))}))
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&#34;the-route-and-interceptor-implementations&#34;&gt;The Route and Interceptor Implementations&lt;/h1&gt;
+&lt;h2 id=&#34;building-the-interceptor-chain&#34;&gt;Building the Interceptor Chain&lt;/h2&gt;
+&lt;p&gt;For each Pedestal route defined in the application, an interceptor chain (a vector of interceptors) is constructed and included in the service map which is passed to &lt;code&gt;io.pedestal.http/start&lt;/code&gt; to start the server. The application uses a function &lt;code&gt;build-secured-route-vec-to&lt;/code&gt; to return a vector of interceptors that are &lt;em&gt;installed&lt;/em&gt; for the route. The vector returned will include a number of common interceptors in addition to the security-related interceptors we&amp;rsquo;ve been discussing.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;build-secured-route-vec-to&lt;/code&gt; function takes as parameters a &lt;strong&gt;handler&lt;/strong&gt; (or interceptor), and potentially two option parameters, &lt;code&gt;:use-headers&lt;/code&gt; and &lt;code&gt;:rules&lt;/code&gt;. The &lt;strong&gt;handler&lt;/strong&gt; is installed as the last interceptor in the chain, and is expected to provide the business-logic functionality.&lt;/p&gt;
+&lt;p&gt;If a &lt;code&gt;:rules&lt;/code&gt; option is supplied, it is expected to be a map conforming to the format required by &lt;code&gt;buddy.auth.accessrules&lt;/code&gt;. The presence of the &lt;code&gt;:rules&lt;/code&gt; option will also cause the &lt;code&gt;:alloc-auth-access-rule-checker&lt;/code&gt; interceptor to be included in the vector of interceptors returned.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;:use-headers&lt;/code&gt; option can be ignored for now. It will be the subject of another blog post discussing how to create a custom backend for Buddy.&lt;/p&gt;
+&lt;h2 id=&#34;the-security-interceptors&#34;&gt;The Security Interceptors&lt;/h2&gt;
+&lt;p&gt;Now let&amp;rsquo;s take a closer look at the implementation details of the security-related interceptors mentioned above.&lt;/p&gt;
+&lt;h3 id=&#34;the-alloc-auth-authenticate-interceptor&#34;&gt;The &lt;code&gt;:alloc-auth-authenticate&lt;/code&gt; interceptor&lt;/h3&gt;
+&lt;p&gt;This interceptor is responsible for the authentication of the user and is created by the  &lt;code&gt;alloc-auth-authentication-interceptor&lt;/code&gt; function.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn alloc-auth-authentication-interceptor
+  [backend]
+  (interceptor/interceptor
+    {:name  ::alloc-auth-authenticate
+     :enter (fn [ctx]
+              (update
+                ctx
+                :request
+                auth.middleware/authentication-request
+                backend))}))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;authentication-request&lt;/code&gt; is a function which takes a &lt;strong&gt;request&lt;/strong&gt; and a &lt;strong&gt;backend&lt;/strong&gt; and using the &lt;strong&gt;backend&lt;/strong&gt; attempts to parse the &lt;strong&gt;request&lt;/strong&gt; and to authenticate the user. If the user is sucessfully authenticated an &lt;code&gt;:identity&lt;/code&gt; key is added to the request map with the value returned by the backend&amp;rsquo;s &lt;code&gt;authfn&lt;/code&gt; function. The interceptor simply updates and returns the context map with the (potentially) updated &lt;strong&gt;request&lt;/strong&gt; map returned by the call to &lt;code&gt;authentication-request&lt;/code&gt;.&lt;/p&gt;
+&lt;h3 id=&#34;the-alloc-auth-user-roles-interceptor&#34;&gt;The &lt;code&gt;:alloc-auth-user-roles&lt;/code&gt; interceptor&lt;/h3&gt;
+&lt;p&gt;This interceptor will attach to the context map information about the roles to which the user has been assigned. It is created by calling the &lt;code&gt;alloc-auth-user-roles-interceptor&lt;/code&gt; function.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn alloc-auth-user-roles-interceptor
+  []
+  {:name  ::alloc-auth-user-roles
+   :enter (fn [ctx]
+            (log/info &amp;quot;Assigning roles for identity &amp;quot; (pr-str (get-in ctx [:request :identity])))
+            (let
+              [{identity-user-id    :alloc-auth/user-id
+                identity-token-type :alloc-auth/token-type
+                identity-token      :alloc-auth/token}
+               (get-in ctx [:request :identity])]
+              (assoc
+                ctx
+                :alloc-auth/auth
+                {:user  identity-user-id
+                 :roles (alloc-auth-get-roles-for-identity identity-user-id)})))})
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This interceptor was discussed quite extensively above, but two items are worth noting. The authenticated user (in the &lt;strong&gt;request&lt;/strong&gt; map&amp;rsquo;s &lt;code&gt;:identity&lt;/code&gt; field) is expected to be identified by a map with the keys &lt;code&gt;:alloc-auth/user-id&lt;/code&gt;, &lt;code&gt;:alloc-auth/token-type&lt;/code&gt; and &lt;code&gt;:alloc-auth/token&lt;/code&gt;. For our current discussion the first of these is the most important, and using buddy&amp;rsquo;s session backend would have been extracted from the user&amp;rsquo;s session object. It is the internal application user id for the user e.g. &lt;code&gt;:admin&lt;/code&gt; or &lt;code&gt;:fred&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;This value is used by &lt;code&gt;alloc-auth-get-roles-for-identity&lt;/code&gt; to return a collection of &lt;strong&gt;role&lt;/strong&gt; entities indicating with which roles the user is associated. The interceptor returns an updated context with this information attached in the &lt;code&gt;:alloc-auth/auth&lt;/code&gt; key.&lt;/p&gt;
+&lt;h3 id=&#34;the-error-catcher-interceptor&#34;&gt;The Error Catcher interceptor&lt;/h3&gt;
+&lt;p&gt;This interceptor will catch authentication and authorization errors raised by the &lt;code&gt;:alloc-auth-permission-checker&lt;/code&gt; and &lt;code&gt;:alloc-auth-access-rule-checker&lt;/code&gt; interceptors (any others are ignored). This interceptor is created by calling the &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt; function, which internally uses Pedestal&amp;rsquo;s &lt;code&gt;error-dispatch&lt;/code&gt; function to match errors with handlers.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn alloc-auth-unauthorized-interceptor
+  [backend]
+  (letfn
+    [(unauthorized-fn[ctx ex]
+       (assoc
+         ctx
+         :response
+         (.-handle-unauthorized
+           backend
+           (:request ctx)
+           {:details
+            {:request (ex-data (ex-cause ex))
+             :message (pr-str (ex-message (ex-cause ex)))}})))]
+    (error-dispatch
+      [ctx ex]
+      [{:exception-type :clojure.lang.ExceptionInfo 
+        :interceptor ::alloc-auth-permission-checker}]
+      (try
+        (unauthorized-fn ctx ex)
+        (catch Exception e
+          (assoc ctx ::interceptor.chain/error e)))
+      [{:exception-type :clojure.lang.ExceptionInfo 
+        :interceptor ::alloc-auth-access-rule-checker}]
+      (try
+        (unauthorized-fn ctx ex)
+        (catch Exception e
+          (assoc ctx ::interceptor.chain/error e)))
+      :else
+      (assoc ctx ::interceptor.chain/error ex))))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The function uses Pedestal&amp;rsquo;s &lt;code&gt;error-dispatch&lt;/code&gt; function to create an interceptor that can handle &lt;code&gt;ExceptionInfo&lt;/code&gt; exceptions thrown by either the &lt;code&gt;::alloc-auth-permission-checker&lt;/code&gt; or &lt;code&gt;::alloc-auth-access-rule-checker&lt;/code&gt; interceptors.&lt;/p&gt;
+&lt;p&gt;In the case of either exception, it will call the backend&amp;rsquo;s &lt;code&gt;-handle-unauthorized&lt;/code&gt; method (from the &lt;code&gt;IAuthorization&lt;/code&gt; protocol implemented by the backend), which ultimately calls the &lt;code&gt;unauthorized-handler&lt;/code&gt; function registered with the backend (see the notes on &lt;code&gt;alloc-auth-session-auth-backend&lt;/code&gt; above).&lt;/p&gt;
+&lt;p&gt;Any errors that cannot be handled, or throw exceptions during handling are reattached to the context map - potentially to be handled by another interceptor&amp;rsquo;s &lt;code&gt;:error&lt;/code&gt; function, or escaping at the top level with a &lt;strong&gt;5xx&lt;/strong&gt; error being returned to the client.&lt;/p&gt;
+&lt;h3 id=&#34;the-alloc-auth-permission-checker-interceptor&#34;&gt;The &lt;code&gt;:alloc-auth-permission-checker&lt;/code&gt; interceptor&lt;/h3&gt;
+&lt;p&gt;This interceptor checks whether the user&amp;rsquo;s &lt;strong&gt;roles&lt;/strong&gt; (embedded in the context map by &lt;code&gt;:alloc-auth-user-roles&lt;/code&gt;) allow access to the requested uri. It is created by calling the &lt;code&gt;alloc-auth-permission-checker-interceptor-factory&lt;/code&gt; function.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn alloc-auth-permission-checker-interceptor-factory
+  []
+  (interceptor/interceptor
+    {:name  ::alloc-auth-permission-checker
+     :enter (fn [ctx]
+              (log/info
+                (str &amp;quot;Checking Identity: &amp;quot;
+                     (pr-str (get-in ctx [:request :identity :alloc-auth/user-id] :unauthenticated))
+                     &amp;quot; for access to &amp;quot;
+                     (pr-str (get-in ctx [:request :path-info]))
+                     &amp;quot; with path params &amp;quot;
+                     (pr-str (get-in ctx [:request :path-params]))
+                     &amp;quot; for route name &amp;quot;
+                     (pr-str (get-in ctx [:route :route-name]))
+                     &amp;quot; with session &amp;quot;
+                     (pr-str (get-in ctx [:request :session]))))
+              (let
+                [{req-path :path-info
+                  res-path-params :path-params
+                  {identity-user-id    :alloc-auth/user-id
+                   identity-token-type :alloc-auth/token-type
+                   identity-token      :alloc-auth/token
+                   user-session :alloc-auth/user-session} :identity}
+                 (get-in ctx [:request])
+                 {route-name        :route-name route-method :method
+                  route-path-re     :path-re route-path-parts :path-parts
+                  route-path-params :path-params}
+                 (get-in ctx [:route])
+                 {user :user roles :roles}
+                 (get-in ctx [:alloc-auth/auth])
+                 required-roles
+                 (get-in @alloc-auth-permissions [route-name :permissions :roles])]
+
+                (log/info
+                  (str &amp;quot;User Roles: &amp;quot;
+                       (pr-str roles)
+                       &amp;quot; , required roles &amp;quot;
+                       (pr-str required-roles)))
+
+                (if (and
+                      (not (contains? required-roles :public))
+                      (empty? (clojure.set/intersection
+                                roles required-roles)))
+                  (throw
+                    (ex-info &amp;quot;Alloc-Unauthorized&amp;quot;
+                             {:path     req-path :path-params res-path-params
+                              :user     user :roles roles :identity identity
+                              :required required-roles
+                              :user-session user-session}))
+                  (update-in
+                    ctx
+                    [:request]
+                    assoc :auth-alloc &amp;quot;ok&amp;quot;))))}))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If the &lt;strong&gt;roles&lt;/strong&gt; associated with the user, and &lt;code&gt;assoc&lt;/code&gt;-ed into the context map earlier as &lt;code&gt;:alloc-auth/auth&lt;/code&gt; don&amp;rsquo;t intersect with the &lt;strong&gt;roles&lt;/strong&gt; required for access (stored in the &lt;code&gt;alloc-auth-permissions&lt;/code&gt; atom) an &lt;code&gt;ex-info&lt;/code&gt; exception is thrown. The exception will be handled by the &lt;strong&gt;error catcher&lt;/strong&gt; interceptor which will return the appropriate response to the client.&lt;/p&gt;
+&lt;h3 id=&#34;the-alloc-auth-access-rule-checker-interceptor&#34;&gt;The &lt;code&gt;:alloc-auth-access-rule-checker&lt;/code&gt; interceptor&lt;/h3&gt;
+&lt;p&gt;If the Pedestal interceptor chain which is built using &lt;code&gt;build-secured-route-vec-to&lt;/code&gt; was passed a &lt;code&gt;:rules&lt;/code&gt; parameter, this interceptor will run the rules&amp;rsquo; handler functions to decide whether access to the resource should be granted (returns &lt;code&gt;success&lt;/code&gt;) or denied (returns &lt;code&gt;error&lt;/code&gt;).&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn alloc-auth-rules-checker-interceptor-factory
+  [rules]
+  (interceptor/interceptor
+    {:name  :alloc-auth-access-rule-checker
+     :enter (fn [context]
+              (let
+                [request (:request context)
+                 policy :allow
+                 w-a-rules-fn
+                 (auth.accessrules/wrap-access-rules
+                   (fn [req] :ok)
+                   {:rules rules :policy policy})]
+                (w-a-rules-fn request)
+                context))}))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The final security-related interceptor uses &lt;code&gt;buddy.auth.accessrules&lt;/code&gt; to determine if access should be granted. &lt;code&gt;buddy.auth.accessrules&lt;/code&gt; contains a &lt;code&gt;wrap-access-rules&lt;/code&gt; function that is helpful in Ring&amp;rsquo;s middleware context to wrap other Ring handlers. The interceptor uses this functionality by providing a &lt;strong&gt;synthetic&lt;/strong&gt; handler that returns &lt;code&gt;:ok&lt;/code&gt;. This works for our purposes, because the implementation of &lt;code&gt;wrap-access-rules&lt;/code&gt; when &lt;strong&gt;called&lt;/strong&gt; with a request will throw an exception if rules are violated for that request. This exception will be caught by the &lt;strong&gt;error catcher&lt;/strong&gt; interceptor. If no exception is thrown, the interceptor returns unchanged the context map it received.&lt;/p&gt;
+&lt;h1 id=&#34;next-steps&#34;&gt;Next Steps&lt;/h1&gt;
+&lt;p&gt;Hopefully, if you&amp;rsquo;ve been looking for guidance on how to integrate Buddy with Pedestal this document has helped. A later post will consider how one might provide a custom backend for Buddy.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Deploy a Clojure Pedestal API Server &amp; React/ClojureScript Web Application to Docker</title>
