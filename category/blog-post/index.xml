@@ -113,7 +113,7 @@ This function takes as parameters the request, and the backend. It will populate
 &lt;p&gt;Then the &lt;em&gt;&lt;strong&gt;error catching&lt;/strong&gt;&lt;/em&gt; interceptor (created by the function &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt;) is entered. It returns the received context map unchanged. It&amp;rsquo;s only responsibility is to handle exceptions that might be thrown later by the interceptors named &lt;code&gt;:alloc-auth-permission-checker&lt;/code&gt; and &lt;code&gt;:alloc-auth-access-rule-checker&lt;/code&gt;. These two interceptors in turn check the user&amp;rsquo;s access to a resource (uri) based on his/her assigned roles; and checks his/her access based on custom defined rules. (I provide a expanded description of both below.)&lt;/p&gt;
 &lt;div class=&#34;alert alert-note&#34;&gt;
 &lt;div&gt;
-  A benefit of using a single &lt;em&gt;error catching&lt;/em&gt; interceptor is that there is a consolidation of application responses in a single area of the code rather than having them spread throughout the code in other interceptors&amp;rsquo; &lt;code&gt;:error&lt;/code&gt; functions. Also, the interceptor is created by the &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt; function which takes a &lt;em&gt;backend&lt;/em&gt; as a parameter. This parameter is &lt;em&gt;closed over&lt;/em&gt; by the function. Therefore, in addition to the consistency of responses mentioned above, it also ensures that the backend is fully &lt;em&gt;swappable&lt;/em&gt; and can be changed without impacting other areas of the code.
+  A benefit of using a single &lt;em&gt;error catching&lt;/em&gt; interceptor is that there is a consolidation of application responses in a single area of the code rather than having them spread throughout the code in other interceptors&amp;rsquo; &lt;code&gt;:error&lt;/code&gt; functions. The interceptor is created by the &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt; function which will select the appropriate &lt;em&gt;backend&lt;/em&gt; at the time an authentication or authorization error is encountered. Therefore, in addition to the consistency of responses mentioned above, this approach ensures that backends are fully &lt;em&gt;swappable&lt;/em&gt; and can be changed without impacting other areas of the code.
 &lt;/div&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
@@ -246,20 +246,33 @@ This function takes as parameters the request, and the backend. It will populate
   (interceptor/interceptor
     {:name  ::alloc-auth-authenticate
      :enter (fn [ctx]
-              (update
-                ctx
-                :request
-                auth.middleware/authentication-request
-                backend))}))
+              (-&amp;gt; ctx
+                  (assoc
+                    :auth/backend
+                    backend)
+                  (update
+                    :request
+                    auth.middleware/authentication-request
+                    backend)))}))
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;code&gt;authentication-request&lt;/code&gt; is a function which takes a &lt;strong&gt;request&lt;/strong&gt; and a &lt;strong&gt;backend&lt;/strong&gt; and using the &lt;strong&gt;backend&lt;/strong&gt; attempts to parse the &lt;strong&gt;request&lt;/strong&gt; and to authenticate the user. If the user is sucessfully authenticated an &lt;code&gt;:identity&lt;/code&gt; key is added to the request map with the value returned by the backend&amp;rsquo;s &lt;code&gt;authfn&lt;/code&gt; function. The interceptor simply updates and returns the context map with the (potentially) updated &lt;strong&gt;request&lt;/strong&gt; map returned by the call to &lt;code&gt;authentication-request&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;authentication-request&lt;/code&gt; is a function which takes a &lt;strong&gt;request&lt;/strong&gt; and a &lt;strong&gt;backend&lt;/strong&gt; and using the &lt;strong&gt;backend&lt;/strong&gt; attempts to parse the &lt;strong&gt;request&lt;/strong&gt; and to authenticate the user. If the user is sucessfully authenticated an &lt;code&gt;:identity&lt;/code&gt; key is added to the request map with the value returned by the backend&amp;rsquo;s &lt;code&gt;authfn&lt;/code&gt; function.&lt;/p&gt;
+&lt;p&gt;The interceptor performs two functions:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;it attaches to the context map the authentication backend being used. This makes it available to other interceptors later in the chain, particularly the &lt;strong&gt;error catcher&lt;/strong&gt; interceptor.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;it updates and returns the context map with the (potentially) updated &lt;strong&gt;request&lt;/strong&gt; map returned by the call to &lt;code&gt;authentication-request&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
 &lt;h3 id=&#34;the-alloc-auth-user-roles-interceptor&#34;&gt;The &lt;code&gt;:alloc-auth-user-roles&lt;/code&gt; interceptor&lt;/h3&gt;
 &lt;p&gt;This interceptor will attach to the context map information about the roles to which the user has been assigned. It is created by calling the &lt;code&gt;alloc-auth-user-roles-interceptor&lt;/code&gt; function.&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn alloc-auth-user-roles-interceptor
   []
   {:name  ::alloc-auth-user-roles
    :enter (fn [ctx]
-            (log/info &amp;quot;Assigning roles for identity &amp;quot; (pr-str (get-in ctx [:request :identity])))
+            (log/info &amp;quot;Assigning roles for identity &amp;quot; 
+              (pr-str (get-in ctx [:request :identity])))
             (let
               [{identity-user-id    :alloc-auth/user-id
                 identity-token-type :alloc-auth/token-type
@@ -276,18 +289,24 @@ This function takes as parameters the request, and the backend. It will populate
 &lt;h3 id=&#34;the-error-catcher-interceptor&#34;&gt;The Error Catcher interceptor&lt;/h3&gt;
 &lt;p&gt;This interceptor will catch authentication and authorization errors raised by the &lt;code&gt;:alloc-auth-permission-checker&lt;/code&gt; and &lt;code&gt;:alloc-auth-access-rule-checker&lt;/code&gt; interceptors (any others are ignored). This interceptor is created by calling the &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt; function, which internally uses Pedestal&amp;rsquo;s &lt;code&gt;error-dispatch&lt;/code&gt; function to match errors with handlers.&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn alloc-auth-unauthorized-interceptor
-  [backend]
+  []
   (letfn
     [(unauthorized-fn[ctx ex]
-       (assoc
-         ctx
-         :response
-         (.-handle-unauthorized
-           backend
-           (:request ctx)
-           {:details
-            {:request (ex-data (ex-cause ex))
-             :message (pr-str (ex-message (ex-cause ex)))}})))]
+       (if-let
+         [handling-backend (:auth/backend ctx)]
+         (assoc
+           ctx
+           :response
+           (.-handle-unauthorized
+             handling-backend
+             (:request ctx)
+             {:details
+              {:request (ex-data (ex-cause ex))
+               :message (pr-str (ex-message (ex-cause ex)))}}))
+         (do
+           (log/error &amp;quot;Unauthorized requests, but there is no backend&amp;quot;
+                      &amp;quot;installed to handle the exception.&amp;quot;)
+           (throw &amp;quot;No auth backend found.&amp;quot;))))]
     (error-dispatch
       [ctx ex]
       [{:exception-type :clojure.lang.ExceptionInfo 
@@ -297,7 +316,7 @@ This function takes as parameters the request, and the backend. It will populate
         (catch Exception e
           (assoc ctx ::interceptor.chain/error e)))
       [{:exception-type :clojure.lang.ExceptionInfo 
-        :interceptor ::alloc-auth-access-rule-checker}]
+        :interceptor :alloc-auth-access-rule-checker}]
       (try
         (unauthorized-fn ctx ex)
         (catch Exception e
@@ -308,6 +327,7 @@ This function takes as parameters the request, and the backend. It will populate
 &lt;p&gt;The function uses Pedestal&amp;rsquo;s &lt;code&gt;error-dispatch&lt;/code&gt; function to create an interceptor that can handle &lt;code&gt;ExceptionInfo&lt;/code&gt; exceptions thrown by either the &lt;code&gt;::alloc-auth-permission-checker&lt;/code&gt; or &lt;code&gt;::alloc-auth-access-rule-checker&lt;/code&gt; interceptors.&lt;/p&gt;
 &lt;p&gt;In the case of either exception, it will call the backend&amp;rsquo;s &lt;code&gt;-handle-unauthorized&lt;/code&gt; method (from the &lt;code&gt;IAuthorization&lt;/code&gt; protocol implemented by the backend), which ultimately calls the &lt;code&gt;unauthorized-handler&lt;/code&gt; function registered with the backend (see the notes on &lt;code&gt;alloc-auth-session-auth-backend&lt;/code&gt; above).&lt;/p&gt;
 &lt;p&gt;Any errors that cannot be handled, or throw exceptions during handling are reattached to the context map - potentially to be handled by another interceptor&amp;rsquo;s &lt;code&gt;:error&lt;/code&gt; function, or escaping at the top level with a &lt;strong&gt;5xx&lt;/strong&gt; error being returned to the client.&lt;/p&gt;
+&lt;p&gt;Note, that the backend instance to be used when signalling an exception is retrieved from the context map. It was added to the context map by the &lt;code&gt;:alloc-auth-authenticate&lt;/code&gt; interceptor (see above).&lt;/p&gt;
 &lt;h3 id=&#34;the-alloc-auth-permission-checker-interceptor&#34;&gt;The &lt;code&gt;:alloc-auth-permission-checker&lt;/code&gt; interceptor&lt;/h3&gt;
 &lt;p&gt;This interceptor checks whether the user&amp;rsquo;s &lt;strong&gt;roles&lt;/strong&gt; (embedded in the context map by &lt;code&gt;:alloc-auth-user-roles&lt;/code&gt;) allow access to the requested uri. It is created by calling the &lt;code&gt;alloc-auth-permission-checker-interceptor-factory&lt;/code&gt; function.&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn alloc-auth-permission-checker-interceptor-factory
@@ -317,15 +337,22 @@ This function takes as parameters the request, and the backend. It will populate
      :enter (fn [ctx]
               (log/info
                 (str &amp;quot;Checking Identity: &amp;quot;
-                     (pr-str (get-in ctx [:request :identity :alloc-auth/user-id] :unauthenticated))
+                     (pr-str 
+                       (get-in ctx 
+                         [:request :identity :alloc-auth/user-id] 
+                          :unauthenticated))
                      &amp;quot; for access to &amp;quot;
-                     (pr-str (get-in ctx [:request :path-info]))
+                     (pr-str 
+                       (get-in ctx [:request :path-info]))
                      &amp;quot; with path params &amp;quot;
-                     (pr-str (get-in ctx [:request :path-params]))
+                     (pr-str 
+                       (get-in ctx [:request :path-params]))
                      &amp;quot; for route name &amp;quot;
-                     (pr-str (get-in ctx [:route :route-name]))
+                     (pr-str 
+                       (get-in ctx [:route :route-name]))
                      &amp;quot; with session &amp;quot;
-                     (pr-str (get-in ctx [:request :session]))))
+                     (pr-str 
+                       (get-in ctx [:request :session]))))
               (let
                 [{req-path :path-info
                   res-path-params :path-params
@@ -341,7 +368,9 @@ This function takes as parameters the request, and the backend. It will populate
                  {user :user roles :roles}
                  (get-in ctx [:alloc-auth/auth])
                  required-roles
-                 (get-in @alloc-auth-permissions [route-name :permissions :roles])]
+                 (get-in 
+                   @alloc-auth-permissions 
+                   [route-name :permissions :roles])]
 
                 (log/info
                   (str &amp;quot;User Roles: &amp;quot;
