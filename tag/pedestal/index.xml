@@ -426,7 +426,8 @@ This function takes as parameters the request, and the backend. It will populate
 &lt;p&gt;In this post I&amp;rsquo;ll show how to build and deploy to docker a fully-functioning application comprising a secure Pedestal API web-server and a React front-end application written in ClojureScript which accesses the server.&lt;/p&gt;
 &lt;p&gt;For this example I&amp;rsquo;ll be using the Pedestal/React application I previously discussed in this 
 &lt;a href=&#34;https://heykieran.github.io/post/pedestal-and-google/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;blog post&lt;/a&gt; (with its code 
-&lt;a href=&#34;https://github.com/heykieran/clj-pedestal-spa/tree/v1.0&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;here&lt;/a&gt; for &lt;strong&gt;tag v1.0&lt;/strong&gt;).&lt;/p&gt;
+&lt;a href=&#34;https://github.com/heykieran/clj-pedestal-spa/tree/v1.0&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;here&lt;/a&gt; for &lt;strong&gt;tag v1.0&lt;/strong&gt;), and the code discussed in this post is available 
+&lt;a href=&#34;https://github.com/heykieran/clj-docker-deploy-ext&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
 &lt;h2 id=&#34;outline-of-the-steps&#34;&gt;Outline of the Steps&lt;/h2&gt;
 &lt;p&gt;I&amp;rsquo;ll set up a working directory for the build, clone the target application into a sub-directory, compile the target, package it and its dependencies to java byte code, assemble them into a jar, create a docker image for the application, and deploy it as a docker service.&lt;/p&gt;
 &lt;h3 id=&#34;background-challenges--tools&#34;&gt;Background, Challenges &amp;amp; Tools&lt;/h3&gt;
@@ -744,7 +745,8 @@ d5b269d508b4        testapp:dev         &amp;quot;/sbin/entrypoint.sh&amp;quot; 
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h2 id=&#34;review&#34;&gt;Review&lt;/h2&gt;
 &lt;p&gt;There were quite a number of steps but I hope the detail was illuminative.&lt;/p&gt;
-&lt;p&gt;A later post will illustrate how to integrate the build process within the Clojure application directory structure rather than requiring that it be cloned into separate working directory. That particular post will also show how the build and deployment steps can be automated using a simple Makefile.&lt;/p&gt;
+&lt;p&gt;A later post will illustrate how to integrate the build process within the Clojure application directory structure rather than requiring that it be cloned into a separate working directory.&lt;/p&gt;
+&lt;p&gt;That post will also show how the build and deployment steps can be automated using a simple Makefile.&lt;/p&gt;
 </description>
     </item>
     

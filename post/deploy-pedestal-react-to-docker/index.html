@@ -640,7 +640,8 @@
 <p>In this post I&rsquo;ll show how to build and deploy to docker a fully-functioning application comprising a secure Pedestal API web-server and a React front-end application written in ClojureScript which accesses the server.</p>
 <p>For this example I&rsquo;ll be using the Pedestal/React application I previously discussed in this 
 <a href="https://heykieran.github.io/post/pedestal-and-google/" target="_blank" rel="noopener">blog post</a> (with its code 
-<a href="https://github.com/heykieran/clj-pedestal-spa/tree/v1.0" target="_blank" rel="noopener">here</a> for <strong>tag v1.0</strong>).</p>
+<a href="https://github.com/heykieran/clj-pedestal-spa/tree/v1.0" target="_blank" rel="noopener">here</a> for <strong>tag v1.0</strong>), and the code discussed in this post is available 
+<a href="https://github.com/heykieran/clj-docker-deploy-ext" target="_blank" rel="noopener">here</a>.</p>
 <h2 id="outline-of-the-steps">Outline of the Steps</h2>
 <p>I&rsquo;ll set up a working directory for the build, clone the target application into a sub-directory, compile the target, package it and its dependencies to java byte code, assemble them into a jar, create a docker image for the application, and deploy it as a docker service.</p>
 <h3 id="background-challenges--tools">Background, Challenges &amp; Tools</h3>
@@ -958,7 +959,8 @@ d5b269d508b4        testapp:dev         &quot;/sbin/entrypoint.sh&quot;   15 sec
 </code></pre>
 <h2 id="review">Review</h2>
 <p>There were quite a number of steps but I hope the detail was illuminative.</p>
-<p>A later post will illustrate how to integrate the build process within the Clojure application directory structure rather than requiring that it be cloned into separate working directory. That particular post will also show how the build and deployment steps can be automated using a simple Makefile.</p>
+<p>A later post will illustrate how to integrate the build process within the Clojure application directory structure rather than requiring that it be cloned into a separate working directory.</p>
+<p>That post will also show how the build and deployment steps can be automated using a simple Makefile.</p>
 
     </div>
 
