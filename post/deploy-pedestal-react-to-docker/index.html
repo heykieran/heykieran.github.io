@@ -64,10 +64,8 @@
     
       
       
-        
-          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin="anonymous" title="hl-light">
-          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/dracula.min.css" crossorigin="anonymous" title="hl-dark" disabled>
-        
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin="anonymous" title="hl-light">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin="anonymous" title="hl-dark" disabled>
       
     
 
@@ -642,7 +640,7 @@
 <p>In this post I&rsquo;ll show how to build and deploy to docker a fully-functioning application comprising a secure Pedestal API web-server and a React front-end application written in ClojureScript which accesses the server.</p>
 <p>For this example I&rsquo;ll be using the Pedestal/React application I previously discussed in this 
 <a href="https://heykieran.github.io/post/pedestal-and-google/" target="_blank" rel="noopener">blog post</a> (with its code 
-<a href="https://https://github.com/heykieran/clj-pedestal-google" target="_blank" rel="noopener">here</a>).</p>
+<a href="https://github.com/heykieran/clj-pedestal-spa/tree/v1.0" target="_blank" rel="noopener">here</a> for <strong>tag v1.0</strong>).</p>
 <h2 id="outline-of-the-steps">Outline of the Steps</h2>
 <p>I&rsquo;ll set up a working directory for the build, clone the target application into a sub-directory, compile the target, package it and its dependencies to java byte code, assemble them into a jar, create a docker image for the application, and deploy it as a docker service.</p>
 <h3 id="background-challenges--tools">Background, Challenges &amp; Tools</h3>
@@ -799,6 +797,7 @@ $ cd ..
 <pre><code>$ clj -A:build -m package &quot;target-app&quot;
 </code></pre>
 <p>This completes the Bundling, Compilation and Consolidation steps, and when it finishes I will have a directory structure, which with the addition of the front-end <code>js</code> file (which I compiled above) will constitute the complete application.</p>
+<p>The result is a <code>target</code> folder containing an <code>app-runner.jar</code> file and any other supporting files needed to run the app. Many are extraneous; for instance all the classes files, now included in the <code>jar</code> file are also under this directory, as are the source code of the Clojure files.</p>
 <p>I can copy the <code>js</code> file to its correct location using</p>
 <pre><code>$ mkdir -p target/app/public/cljs-out &amp;&amp; \ 
   cp target-app/target/public/cljs-out/prod-main.js &quot;$_&quot;
@@ -833,6 +832,8 @@ $ java -cp .:classes:lib/* main.core
 </blockquote>
 <p>When I process the files for deployment to docker, these will be removed.</p>
 <p>There remains then only the task of creating the docker image itself, which is outlined below.</p>
+<h2 id="quick-review">Quick Review</h2>
+<p>Currently, we have in the <code>target/app</code> all the artifacts (with some extras) to run the application. Now we will rationalize those artifacts, removing all the unnecessary ones, leaving only those that are necessary for running our application and package what remains into a docker image, which we&rsquo;ll place in the folder <code>docker/deploy</code>.</p>
 <h2 id="create-the-docker-image">Create the Docker Image</h2>
 <p>The docker image I will use is very simple - a basic Debian stretch image with a Java8 SDK.</p>
 <p>In my project directory I create a directory called <code>docker</code> and <code>cd</code> into it.</p>
@@ -876,7 +877,7 @@ ENTRYPOINT [&quot;/sbin/entrypoint.sh&quot;]
 <pre><code>$ 	find docker/deploy/app -maxdepth 1 -mindepth 1 -type d \( ! \( -name 'lib' -o -name 'public' \) \) -exec rm -rf {} \;
 </code></pre>
 <p>This deletes any sub-directory in the <code>docker/deploy</code> folder <strong>not</strong> named <code>lib</code> (which contain the <code>jar</code> files the application needs) or <code>public</code> (which contains all the non-JVM resources the application needs).</p>
-<p>I now add the <code>entrypoint.sh</code> file to the <code>docker/deploy</code> folder. This script, which is run when the image is started, simply calls the application&rsquo;s entry-point.</p>
+<p>I now add the <code>entrypoint.sh</code> file to the <code>docker</code> folder. This script, which is run when the image is started, simply calls the application&rsquo;s entry-point.</p>
 <pre><code class="language-Shell">#!/bin/bash
 # exit immediately if error
 set -e
@@ -1165,6 +1166,10 @@ d5b269d508b4        testapp:dev         &quot;/sbin/entrypoint.sh&quot;   15 sec
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/r.min.js"></script>
         
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/clojure.min.js"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/shell.min.js"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/bash.min.js"></script>
         
       
 

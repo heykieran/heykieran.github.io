@@ -26,8 +26,8 @@
 &lt;h2 id=&#34;whats-not-covered&#34;&gt;What&amp;rsquo;s not covered?&lt;/h2&gt;
 &lt;p&gt;For the purpose of this discussion, there is an assumption that the application is using session-based security. However, there is no discussion of how the user session is &lt;strong&gt;actually&lt;/strong&gt; populated for use by Pedestal and Buddy.&lt;/p&gt;
 &lt;p&gt;This is an important topic and if you want to learn more about how to manage the login and session population processes, you can review the following 
-&lt;a href=&#34;https://heykieran.github.io/post/pedestal-and-google/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;blog post&lt;/a&gt;, where I&amp;rsquo;ve covered it more fully, or the source code for the application available on 
-&lt;a href=&#34;https://github.com/heykieran/clj-pedestal-google&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;GitHub&lt;/a&gt;.&lt;/p&gt;
+&lt;a href=&#34;https://heykieran.github.io/post/pedestal-and-google/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;blog post&lt;/a&gt;, where I&amp;rsquo;ve covered it more fully, or the source code for the application, using session based authentication, is available on 
+&lt;a href=&#34;https://github.com/heykieran/clj-pedestal-spa/tree/v1.0&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;GitHub&lt;/a&gt; (tag &lt;strong&gt;v1.0&lt;/strong&gt;).&lt;/p&gt;
 &lt;h1 id=&#34;the-web-application&#34;&gt;The Web Application&lt;/h1&gt;
 &lt;p&gt;The web application will proceed through the following steps:&lt;/p&gt;
 &lt;ul&gt;

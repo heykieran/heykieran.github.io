@@ -26,8 +26,8 @@
 &lt;h2 id=&#34;whats-not-covered&#34;&gt;What&amp;rsquo;s not covered?&lt;/h2&gt;
 &lt;p&gt;For the purpose of this discussion, there is an assumption that the application is using session-based security. However, there is no discussion of how the user session is &lt;strong&gt;actually&lt;/strong&gt; populated for use by Pedestal and Buddy.&lt;/p&gt;
 &lt;p&gt;This is an important topic and if you want to learn more about how to manage the login and session population processes, you can review the following 
-&lt;a href=&#34;https://heykieran.github.io/post/pedestal-and-google/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;blog post&lt;/a&gt;, where I&amp;rsquo;ve covered it more fully, or the source code for the application available on 
-&lt;a href=&#34;https://github.com/heykieran/clj-pedestal-google&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;GitHub&lt;/a&gt;.&lt;/p&gt;
+&lt;a href=&#34;https://heykieran.github.io/post/pedestal-and-google/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;blog post&lt;/a&gt;, where I&amp;rsquo;ve covered it more fully, or the source code for the application, using session based authentication, is available on 
+&lt;a href=&#34;https://github.com/heykieran/clj-pedestal-spa/tree/v1.0&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;GitHub&lt;/a&gt; (tag &lt;strong&gt;v1.0&lt;/strong&gt;).&lt;/p&gt;
 &lt;h1 id=&#34;the-web-application&#34;&gt;The Web Application&lt;/h1&gt;
 &lt;p&gt;The web application will proceed through the following steps:&lt;/p&gt;
 &lt;ul&gt;
@@ -424,7 +424,7 @@ This function takes as parameters the request, and the backend. It will populate
       <guid>https://heykieran.github.io/post/pedestal-and-google/</guid>
       <description>&lt;h1 id=&#34;introduction&#34;&gt;Introduction&lt;/h1&gt;
 &lt;p&gt;The following are some notes about a 
-&lt;a href=&#34;https://github.com/heykieran/clj-pedestal-google&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;repository&lt;/a&gt;
+&lt;a href=&#34;https://github.com/heykieran/clj-pedestal-spa/tree/v1.0&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;repository&lt;/a&gt;
 containing working code (extracted from a larger project) demonstrating a
 combination of a secured &lt;strong&gt;Pedestal&lt;/strong&gt; website (and associated API services), and
 a &lt;strong&gt;React&lt;/strong&gt;-ive ClojureScript front-end application that utilizes either Google
@@ -695,7 +695,7 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;pre&gt;&lt;code&gt;clj -A:prod
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;from the command line. This will generate the production js files from your ClojureScript sources. Then, from the command line run&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;clj -A:main -m control
+&lt;pre&gt;&lt;code&gt;clj -A:main:main-output -m control
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;This will start the Pedestal server which in addition to serving API requests will also serve the js files built in the last step.&lt;/p&gt;
 &lt;p&gt;Finally, open your browser and navigate to &lt;code&gt;https://&amp;lt;my-hostname&amp;gt;:8081/r/home&lt;/code&gt; to display the application&amp;rsquo;s Home page.&lt;/p&gt;

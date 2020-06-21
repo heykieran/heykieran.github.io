@@ -64,10 +64,8 @@
     
       
       
-        
-          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin="anonymous" title="hl-light">
-          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/dracula.min.css" crossorigin="anonymous" title="hl-dark" disabled>
-        
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin="anonymous" title="hl-light">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin="anonymous" title="hl-dark" disabled>
       
     
 
@@ -640,7 +638,7 @@
     <div class="article-style">
       <h1 id="introduction">Introduction</h1>
 <p>The following are some notes about a 
-<a href="https://github.com/heykieran/clj-pedestal-google" target="_blank" rel="noopener">repository</a>
+<a href="https://github.com/heykieran/clj-pedestal-spa/tree/v1.0" target="_blank" rel="noopener">repository</a>
 containing working code (extracted from a larger project) demonstrating a
 combination of a secured <strong>Pedestal</strong> website (and associated API services), and
 a <strong>React</strong>-ive ClojureScript front-end application that utilizes either Google
@@ -911,7 +909,7 @@ will be loaded. (You should have set this in <code>dev.cljs.edn</code> as above)
 <pre><code>clj -A:prod
 </code></pre>
 <p>from the command line. This will generate the production js files from your ClojureScript sources. Then, from the command line run</p>
-<pre><code>clj -A:main -m control
+<pre><code>clj -A:main:main-output -m control
 </code></pre>
 <p>This will start the Pedestal server which in addition to serving API requests will also serve the js files built in the last step.</p>
 <p>Finally, open your browser and navigate to <code>https://&lt;my-hostname&gt;:8081/r/home</code> to display the application&rsquo;s Home page.</p>
@@ -1626,6 +1624,10 @@ an access denied message.</p>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/r.min.js"></script>
         
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/clojure.min.js"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/shell.min.js"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/bash.min.js"></script>
         
       
 

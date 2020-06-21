@@ -64,10 +64,8 @@
     
       
       
-        
-          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin="anonymous" title="hl-light">
-          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/dracula.min.css" crossorigin="anonymous" title="hl-dark" disabled>
-        
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin="anonymous" title="hl-light">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin="anonymous" title="hl-dark" disabled>
       
     
 
@@ -595,7 +593,7 @@
   
   <span class="middot-divider"></span>
   <span class="article-reading-time">
-    10 min read
+    11 min read
   </span>
   
 
@@ -639,7 +637,10 @@
 
     <div class="article-style">
       <h1 id="introduction">Introduction</h1>
-<p>In a previous blog post I showed how it was possible to take a Clojure project containing a Pedestal <em>back-end</em> and a React <em>front-end</em>, and package it as a Docker container which can be run as a standalone Docker image using <code>docker run</code>, or as part of a Docker Swarm using <code>docker service</code>. In this post, I will show how it is possible to deploy the same Docker container to a Kubernetes Cluster and to make the application available at a particular URL of your choosing.</p>
+<p>In a previous blog post I showed how it was possible to take a Clojure project containing a Pedestal <em>back-end</em> and a React <em>front-end</em>, and package it as a Docker container which can be run as a standalone Docker image using <code>docker run</code>, or as part of a Docker Swarm using <code>docker service</code>.</p>
+<p>In this post, I will show how it is possible to deploy the same Docker container to a Kubernetes Cluster and to make the application available at a particular URL of your choosing.</p>
+<p>A repository containing the code can be found 
+<a href="https://github.com/heykieran/clj-pedestal-spa/tree/v1.2" target="_blank" rel="noopener">here</a> (tag <strong>v1.2</strong>).</p>
 <h1 id="summary-of-the-steps">Summary of the steps</h1>
 <ul>
 <li>Create a GCP Project</li>
@@ -672,11 +673,11 @@
 </code></pre>
 <p>from the command line.</p>
 <p>Finally, with the tools installed and your project created, you can view its details using</p>
-<pre><code>$ gcloud projects describe clojure-app-v1
+<pre><code>$ gcloud projects describe allocations-accounting-v1
 </code></pre>
 <h3 id="setting-your-current-project">Setting your Current Project</h3>
-<p>Now, you should set <code>clojure-app-v1</code> to be the <em>current</em> project. (If you&rsquo;ve run <code>gcloud init</code> as above, this should already have been done, but it&rsquo;s no harm to <em>set</em> it a second time.)</p>
-<pre><code>$ gcloud config set project clojure-app-v1
+<p>Now, you should set <code>allocations-accounting-v1</code> to be the <em>current</em> project. (If you&rsquo;ve run <code>gcloud init</code> as above, this should already have been done, but it&rsquo;s no harm to <em>set</em> it a second time.)</p>
+<pre><code>$ gcloud config set project allocations-accounting-v1
 </code></pre>
 <h3 id="connecting-you-docker-repository-to-gcp">Connecting you Docker Repository to GCP</h3>
 <p>In order to easily publish a docker image from your local machine to a GCP container registry you should configure docker to use <code>gcloud</code> as the credential helper for all Google&rsquo;s registries using</p>
@@ -691,19 +692,18 @@ $ make docker
 <p>from the command line.</p>
 <h3 id="tag-the-image-for-upload-to-the-google-container-registry">Tag the image for upload to the Google container registry</h3>
 <p>Now we&rsquo;ll tag the image so it conforms with the image names expected by the Google registry.</p>
-<pre><code>$ docker tag clojure-app-v1 gcr.io/clojure-app-v1/clojure-app-v1
+<pre><code>$ docker tag clojure-app-v1 gcr.io/allocations-accounting-v1/allocations-accounting:v1.0
 </code></pre>
 <blockquote>
-<p>By default, the above command adds <code>:latest</code> to the end of the tag.</p>
+<p>By default, if you don&rsquo;t specify a tag the above command adds <code>:latest</code> to the end of the full tag name. It&rsquo;s good practice to explicitly specify a tag.</p>
 </blockquote>
 <p>The Google registry location is constructed using <code>gcr.io/&lt;PROJECT_NAME&gt;/&lt;IMAGE_NAME&gt;.</code></p>
-<p>In the current situation the <code>PROJECT_ID</code> and the <code>IMAGE_NAME</code> are the same, but this does not always have to be the case.</p>
 <h2 id="push-the-image-to-the-google-registry">Push the image to the Google Registry</h2>
 <p>Before Google will accept a pushed image you need to enable the <strong>Google Container Registry API</strong> for your project</p>
 <pre><code>$ gcloud services enable containerregistry.googleapis.com
 </code></pre>
 <p>and then push the tagged image using</p>
-<pre><code>$ docker push gcr.io/clojure-app-v1/clojure-app-v1
+<pre><code>$ docker push gcr.io/allocations-accounting-v1/allocations-accounting:v1.0
 </code></pre>
 <h2 id="create-the-cluster">Create the Cluster</h2>
 <p>First enable the <strong>Kubernetes Engine API</strong> using</p>
@@ -711,40 +711,43 @@ $ make docker
 </code></pre>
 <p>which may take a few minutes.</p>
 <p>When complete, we ask GKE to create a cluster with a single node, which is sufficient for illustrative purposes.</p>
-<pre><code>$ gcloud container clusters create cluster-clojure-app-v1 --num-nodes=1
+<pre><code>$ gcloud container clusters create allocations-accounting-v1-cluster --num-nodes=1
 </code></pre>
 <p>Again, this may take a few minutes as the cluster&rsquo;s resources are created, deployed and health-checked.</p>
 <h3 id="import-credentials">Import Credentials</h3>
 <p>Once the cluster has been created we <em>sync</em> credentials</p>
-<pre><code>$ gcloud container clusters get-credentials cluster-clojure-app-v1
+<pre><code>$ gcloud container clusters get-credentials allocations-accounting-v1-cluster
 </code></pre>
 <p>This will create a <code>kubeconfig</code> entry for the cluster, and allow you to manage the new cluster using the <code>kubectl</code> command line tool.</p>
 <h2 id="get-a-static-ip-address-for-your-site">Get a static IP address for your site</h2>
 <p>We have decided to publish our application at a well-known url (i.e. <code>demo.timpsongray.com</code>), so we need to ensure that we have a stable, externally addressable IP address. We do this by asking GCP to assign a global IP address for our use.</p>
-<pre><code>$ gcloud compute addresses create clojure-app-v1-addr --global
+<pre><code>$ gcloud compute addresses create allocations-app-v1-addr --global
 </code></pre>
 <h3 id="find-the-external-ip-address">Find the external IP address</h3>
 <p>Now, find what IP address was assigned using</p>
 <pre><code>$ gcloud compute addresses list
 </code></pre>
 <p>which should return something like</p>
-<pre><code>NAME                 ADDRESS/RANGE   TYPE      PURPOSE  NETWORK  REGION  SUBNET  STATUS
-clojure-app-v1-addr  34.107.182.232  EXTERNAL                                    RESERVED
+<pre><code>NAME                            ADDRESS/RANGE   TYPE      PURPOSE  NETWORK  REGION  SUBNET  STATUS
+allocations-app-v1-addr         34.120.154.247  EXTERNAL                                    RESERVED
 </code></pre>
 <p>Make a note of the IP address, and then add an <strong>A</strong> record to your DNS associating the name <code>demo.timpsongray.com</code> with that IP address. You may need to wait a little while for the DNS changes to propogate.</p>
 <h3 id="create-a-secret">Create a Secret</h3>
 <p>The application uses either environment variables or docker secrets to configure itself. From an internal perspective, this distinction is abstracted away with the use of the <code>walmartlabs/dyn-edn</code> Clojure library.</p>
 <p>However, GKE adds a feature to its use of secrets that is not available with docker swarm - it&rsquo;s possible to have a secret&rsquo;s value dynamically injected into a container&rsquo;s environment as a standard environment variable.</p>
 <p>In order to make use of this, of course, you must create a secret. This can be done as follows. (The value of <code>&lt;THESECRET&gt;</code> should be the password for the keystore used by the Jetty instance in your application).</p>
-<pre><code>$ kubectl create secret generic demo-secrets \
-   --from-literal=ALLOC_KEYSTORE_PASSWORD='&lt;THESECRET&gt;'
+<pre><code>$ kubectl create secret generic \
+    allocations-app-v1-secrets \
+    --from-literal=ALLOC_KEYSTORE_PASSWORD='&lt;PASSWORD&gt;' \
+    --from-literal ALLOC_SESSION_STORE_KEY='&lt;16 byte session key&gt;'
 </code></pre>
 <p>You can check that the secret was created successfully by issuing the following command and inspecting the results</p>
-<pre><code>$ kubectl describe secrets/demo-secrets
+<pre><code>$ kubectl describe secrets/allocations-app-v1-secrets
 </code></pre>
+<p>It&rsquo;s important that the length of the <code>ALLOC_SESSION_STORE_KEY</code> value is precisely 16 bytes.</p>
 <h2 id="deploy-your-app-to-the-cluster">Deploy your App to the Cluster</h2>
 <p>Now deploy the Docker image containing the application to a container running in the cluster specifying the image recently pushed to the Google registry.</p>
-<p>During the deployment GKE will be requested to inject the value of the <code>ALLOC_KEYSTORE_PASSWORD</code> from the <code>demo-secrets</code> resource as an environment variable (also called <code>ALLOC_KEYSTORE_PASSWORD</code>) into the container&rsquo;s run-time environment. This variable is used by the Clojure application to gain access to Jetty&rsquo;s keystore, which is required to allow Jetty to publish the application on an <code>https</code> endpoint.</p>
+<p>During the deployment GKE will be requested to inject the values of the <code>ALLOC_KEYSTORE_PASSWORD</code> and <code>ALLOC_SESSION_STORE_KEY</code> from the <code>allocations-app-v1-secrets</code> resource as an environment variable (also called <code>ALLOC_KEYSTORE_PASSWORD</code> and <code>ALLOC_SESSION_STORE_KEY</code> respectively) into the container&rsquo;s run-time environment. These variables are used by the Clojure application to gain access to Jetty&rsquo;s keystore, which is required to allow Jetty to publish the application on an <code>https</code> endpoint; and the key used to encode session cookies.</p>
 <div class="alert alert-">
   <div>
     Kubernetes secrets can also be made available within the container at a particular mount point (using <code>tmpfs</code>). This is similar to Docker swarm&rsquo;s strategy. We could use it here, but the environment variable approach is simpler and the use of the <code>dyn-edn</code> library ensures that there&rsquo;s very little transition to be done moving from a local development environment and the Kubernetes production environment.
@@ -758,32 +761,41 @@ clojure-app-v1-addr  34.107.182.232  EXTERNAL                                   
 kind: Deployment
 metadata:
   labels:
-    app: demo
-  name: demo-web
+    app: allocations-app-v1
+  name: allocations-app-v1-web
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: demo
-      tier: web
+      app: allocations-app-v1
+      tier: allocations-app-v1-web
   template:
     metadata:
       labels:
-        app: demo
-        tier: web
+        app: allocations-app-v1
+        tier: allocations-app-v1-web
     spec:
       containers:
-      - image: gcr.io/clojure-app-v1/clojure-app-v1:latest
-        name: demo-app
+      - image: gcr.io/allocations-accounting-v1/allocations-accounting:v1.0
+        name: allocations-app-v1-app
         ports:
         - containerPort: 8081
         env:
+        - name: ALLOC_HOST_NAME
+          value: demo.timpsongray.com
         - name: ALLOC_KEYSTORE_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: demo-secrets
               key: ALLOC_KEYSTORE_PASSWORD
+              name: allocations-app-v1-secrets
+        - name: ALLOC_SESSION_STORE_KEY
+          valueFrom:
+            secretKeyRef:
+              key: ALLOC_SESSION_STORE_KEY
+              name: allocations-app-v1-secrets
 </code></pre>
+<p>Note that the <code>env</code> in the deployment yaml file also specifies a value for <code>ALLOC_HOST_NAME</code>. This is important as the application will make decisions about what ports to use for serving content and api endoints based on this value.</p>
+<p>In the current codebase, if the host name ends with the string &ldquo;<strong>timpsongray.com</strong>&rdquo; then all communication is assumed to occur on port 80. This is probably what&rsquo;s intended for a production system served using https. Obviously, your site name will be different and you should adjust the code.</p>
 <h2 id="create-a-back-end-service">Create a Back-End Service</h2>
 <p>To access the deployed application GKE is requested to create a back-end service over the pods containing the deployment. The request will be for a NodePort service, which exposes the Service on the same port of each selected Node in the cluster using NAT. Makes a Service accessible from outside the cluster using <NodeIP>:<NodePort>. Superset of ClusterIP.</p>
 <p>This is done using</p>
@@ -793,16 +805,16 @@ spec:
 <pre><code>apiVersion: v1
 kind: Service
 metadata:
-  name: demo-svc
+  name: allocations-app-v1-svc
   annotations:
     cloud.google.com/app-protocols: '{&quot;app-https-port&quot;:&quot;HTTPS&quot;,&quot;app-http-port&quot;:&quot;HTTP&quot;}'
   labels:
-    app: demo
+    app: allocations-app-v1
 spec:
   type: NodePort
   selector:
-    app: demo
-    tier: web
+    app: allocations-app-v1
+    tier: allocations-app-v1-web
   ports:
     - name: app-https-port
       port: 8081
@@ -824,10 +836,10 @@ spec:
 </div>
 <h3 id="check-the-services-status">Check the Service&rsquo;s Status</h3>
 <p>A convenient way to check if a web application is running correctly is to use port forwarding from your local machine to tunnel directly to the running pod. You can use the following command to open a tunnel to the node&rsquo;s port 8081 (which is the home port for the <em>containerized</em> Clojure application) from port 8080 on localhost.</p>
-<pre><code>$ gcloud container clusters get-credentials \ 
-  cluster-clojure-app-v1 --zone us-east4-a --project clojure-app-v1 \
+<pre><code>$ gcloud container clusters get-credentials \
+  allocations-accounting-v1-cluster --zone us-east4-a --project allocations-accounting-v1 \
   &amp;&amp; kubectl port-forward $(kubectl get pod \
-  --selector=&quot;app=demo,tier=web&quot; \
+  --selector=&quot;app=allocations-app-v1,tier=allocations-app-v1-web&quot; \
   --output jsonpath='{.items[0].metadata.name}') 8080:8081
 </code></pre>
 <p>and then in your browser, navigate to <code>https://localhost:8080</code>.</p>
@@ -857,7 +869,7 @@ spec:
 <pre><code>apiVersion: networking.gke.io/v1beta1
 kind: ManagedCertificate
 metadata:
-  name: demo-app-cert
+  name: allocations-app-v1-cert
 spec:
   domains:
     - demo.timpsongray.com
@@ -867,8 +879,8 @@ spec:
 <pre><code>$ gcloud compute ssl-certificates list --global
 </code></pre>
 <p>which will show something like</p>
-<pre><code>NAME                                       TYPE     CREATION_TIMESTAMP             EXPIRE_TIME  MANAGED_STATUS
-mcrt-5fc3491d-21fc-4dda-8eb3-6f1b91545247  MANAGED  2020-05-28T06:38:28.757-07:00               PROVISIONING
+<pre><code>NAME                TYPE     CREATION_TIMESTAMP             EXPIRE_TIME  MANAGED_STATUS
+mcrt-5fc3491d-8eb3  MANAGED  2020-05-28T06:38:28.757-07:00               PROVISIONING
 demo.timpsongray.com: PROVISIONING
 </code></pre>
 <p>indicating that provisioning has started, and that the URL is as expected.</p>
@@ -880,20 +892,20 @@ demo.timpsongray.com: PROVISIONING
 <pre><code>apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
-  name: demo-web
+  name: allocations-app-v1-web
   annotations:
-    kubernetes.io/ingress.global-static-ip-name: &quot;clojure-app-v1-addr&quot;
+    kubernetes.io/ingress.global-static-ip-name: &quot;allocations-app-v1-addr&quot;
     kubernetes.io/ingress.allow-http: &quot;false&quot;
-    networking.gke.io/managed-certificates: &quot;demo-app-cert&quot;
+    networking.gke.io/managed-certificates: &quot;allocations-app-v1-cert&quot;
   labels:
-    app: demo
+    app: allocations-app-v1
 spec:
   backend:
-    serviceName: demo-svc
+    serviceName: allocations-app-v1-svc
     servicePort: 8081
 </code></pre>
 <p>Although the kubectl command returns quickly it can take a few minutes for the ingress to be provisioned, deployed and stabilized. You can check its status using</p>
-<pre><code>$ kubectl describe ingress demo-web
+<pre><code>$ kubectl describe ingress allocations-app-v1
 </code></pre>
 <p>When the provisioning is completed, you should be able to navigate to <code>https://demo.timpsongray.com</code> and view your application.</p>
 <h3 id="viewing-logs">Viewing Logs</h3>
@@ -901,11 +913,11 @@ spec:
 <pre><code>$ kubectl get pods
 </code></pre>
 <p>which will return something like</p>
-<pre><code>NAME                       READY   STATUS    RESTARTS   AGE
-demo-web-966bb64f7-zfrdh   1/1     Running   0          68m
+<pre><code>NAME                                     READY   STATUS    RESTARTS   AGE
+allocations-app-v1-web-5d966f5d8-v2wgn   1/1     Running   0          32m
 </code></pre>
 <p>You can then issue the following command (substituting the correct pod name) to view the application logs</p>
-<pre><code>$ kubectl logs demo-web-966bb64f7-zfrdh
+<pre><code>$ kubectl logs allocations-app-v1-web-5d966f5d8-v2wgn
 </code></pre>
 <h1 id="closure">Closure</h1>
 <p>Deploying a web application to Kubernetes and exposing it on the web with a specific URL isn&rsquo;t particularly difficult, but there are a number of places where things can go pear-shaped. Hopefully, this will help when you try to do the same thing.</p>
@@ -1109,6 +1121,10 @@ demo-web-966bb64f7-zfrdh   1/1     Running   0          68m
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/r.min.js"></script>
         
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/clojure.min.js"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/shell.min.js"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/bash.min.js"></script>
         
       
 

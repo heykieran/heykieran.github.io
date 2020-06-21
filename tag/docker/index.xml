@@ -21,7 +21,7 @@
 &lt;p&gt;In this post I&amp;rsquo;ll show how to build and deploy to docker a fully-functioning application comprising a secure Pedestal API web-server and a React front-end application written in ClojureScript which accesses the server.&lt;/p&gt;
 &lt;p&gt;For this example I&amp;rsquo;ll be using the Pedestal/React application I previously discussed in this 
 &lt;a href=&#34;https://heykieran.github.io/post/pedestal-and-google/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;blog post&lt;/a&gt; (with its code 
-&lt;a href=&#34;https://https://github.com/heykieran/clj-pedestal-google&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;here&lt;/a&gt;).&lt;/p&gt;
+&lt;a href=&#34;https://github.com/heykieran/clj-pedestal-spa/tree/v1.0&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;here&lt;/a&gt; for &lt;strong&gt;tag v1.0&lt;/strong&gt;).&lt;/p&gt;
 &lt;h2 id=&#34;outline-of-the-steps&#34;&gt;Outline of the Steps&lt;/h2&gt;
 &lt;p&gt;I&amp;rsquo;ll set up a working directory for the build, clone the target application into a sub-directory, compile the target, package it and its dependencies to java byte code, assemble them into a jar, create a docker image for the application, and deploy it as a docker service.&lt;/p&gt;
 &lt;h3 id=&#34;background-challenges--tools&#34;&gt;Background, Challenges &amp;amp; Tools&lt;/h3&gt;
@@ -178,6 +178,7 @@ $ cd ..
 &lt;pre&gt;&lt;code&gt;$ clj -A:build -m package &amp;quot;target-app&amp;quot;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;This completes the Bundling, Compilation and Consolidation steps, and when it finishes I will have a directory structure, which with the addition of the front-end &lt;code&gt;js&lt;/code&gt; file (which I compiled above) will constitute the complete application.&lt;/p&gt;
+&lt;p&gt;The result is a &lt;code&gt;target&lt;/code&gt; folder containing an &lt;code&gt;app-runner.jar&lt;/code&gt; file and any other supporting files needed to run the app. Many are extraneous; for instance all the classes files, now included in the &lt;code&gt;jar&lt;/code&gt; file are also under this directory, as are the source code of the Clojure files.&lt;/p&gt;
 &lt;p&gt;I can copy the &lt;code&gt;js&lt;/code&gt; file to its correct location using&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;$ mkdir -p target/app/public/cljs-out &amp;amp;&amp;amp; \ 
   cp target-app/target/public/cljs-out/prod-main.js &amp;quot;$_&amp;quot;
@@ -212,6 +213,8 @@ $ java -cp .:classes:lib/* main.core
 &lt;/blockquote&gt;
 &lt;p&gt;When I process the files for deployment to docker, these will be removed.&lt;/p&gt;
 &lt;p&gt;There remains then only the task of creating the docker image itself, which is outlined below.&lt;/p&gt;
+&lt;h2 id=&#34;quick-review&#34;&gt;Quick Review&lt;/h2&gt;
+&lt;p&gt;Currently, we have in the &lt;code&gt;target/app&lt;/code&gt; all the artifacts (with some extras) to run the application. Now we will rationalize those artifacts, removing all the unnecessary ones, leaving only those that are necessary for running our application and package what remains into a docker image, which we&amp;rsquo;ll place in the folder &lt;code&gt;docker/deploy&lt;/code&gt;.&lt;/p&gt;
 &lt;h2 id=&#34;create-the-docker-image&#34;&gt;Create the Docker Image&lt;/h2&gt;
 &lt;p&gt;The docker image I will use is very simple - a basic Debian stretch image with a Java8 SDK.&lt;/p&gt;
 &lt;p&gt;In my project directory I create a directory called &lt;code&gt;docker&lt;/code&gt; and &lt;code&gt;cd&lt;/code&gt; into it.&lt;/p&gt;
@@ -255,7 +258,7 @@ ENTRYPOINT [&amp;quot;/sbin/entrypoint.sh&amp;quot;]
 &lt;pre&gt;&lt;code&gt;$ 	find docker/deploy/app -maxdepth 1 -mindepth 1 -type d \( ! \( -name &#39;lib&#39; -o -name &#39;public&#39; \) \) -exec rm -rf {} \;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;This deletes any sub-directory in the &lt;code&gt;docker/deploy&lt;/code&gt; folder &lt;strong&gt;not&lt;/strong&gt; named &lt;code&gt;lib&lt;/code&gt; (which contain the &lt;code&gt;jar&lt;/code&gt; files the application needs) or &lt;code&gt;public&lt;/code&gt; (which contains all the non-JVM resources the application needs).&lt;/p&gt;
-&lt;p&gt;I now add the &lt;code&gt;entrypoint.sh&lt;/code&gt; file to the &lt;code&gt;docker/deploy&lt;/code&gt; folder. This script, which is run when the image is started, simply calls the application&amp;rsquo;s entry-point.&lt;/p&gt;
+&lt;p&gt;I now add the &lt;code&gt;entrypoint.sh&lt;/code&gt; file to the &lt;code&gt;docker&lt;/code&gt; folder. This script, which is run when the image is started, simply calls the application&amp;rsquo;s entry-point.&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&#34;language-Shell&#34;&gt;#!/bin/bash
 # exit immediately if error
 set -e
