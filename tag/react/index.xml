@@ -338,15 +338,8 @@ d5b269d508b4        testapp:dev         &amp;quot;/sbin/entrypoint.sh&amp;quot; 
 &lt;pre&gt;&lt;code&gt;$ docker service rm testapp
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h2 id=&#34;review&#34;&gt;Review&lt;/h2&gt;
-&lt;p&gt;There were quite a number of steps but I hope the detail was illuminative. The repository also contains a Makefile that streamlines building the application and the docker image easier.&lt;/p&gt;
-&lt;p&gt;The following targets are defined:&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;clean-all&lt;/code&gt; - cleans out all compilation and build artifacts&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;clean-build&lt;/code&gt; - deletes the ClojureScript and JVM build artifacts. Does not remove any docker build artifacts.&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;clean-deploy&lt;/code&gt; - deletes the docker build artifacts in &lt;code&gt;./docker/deploy&lt;/code&gt;&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;build&lt;/code&gt; - build the ClojureScript production &lt;code&gt;js&lt;/code&gt; file, and the JVM &lt;code&gt;.classes&lt;/code&gt; files&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;docker&lt;/code&gt; - builds the docker image&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;docker/deploy&lt;/code&gt; - assembles all the artifacts needed to build the docker image to the &lt;code&gt;docker/deploy&lt;/code&gt; directory, and cleans out any unnecessary files and directories&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;run-local&lt;/code&gt; - using the &lt;code&gt;java&lt;/code&gt; command runs the application from the application jar in the &lt;code&gt;docker/deploy&lt;/code&gt; directory.&lt;/p&gt;
+&lt;p&gt;There were quite a number of steps but I hope the detail was illuminative.&lt;/p&gt;
+&lt;p&gt;A later post will illustrate how to integrate the build process within the Clojure application directory structure rather than requiring that it be cloned into separate working directory. That particular post will also show how the build and deployment steps can be automated using a simple Makefile.&lt;/p&gt;
 </description>
     </item>
     

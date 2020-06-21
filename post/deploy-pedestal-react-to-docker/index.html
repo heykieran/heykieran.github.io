@@ -957,15 +957,8 @@ d5b269d508b4        testapp:dev         &quot;/sbin/entrypoint.sh&quot;   15 sec
 <pre><code>$ docker service rm testapp
 </code></pre>
 <h2 id="review">Review</h2>
-<p>There were quite a number of steps but I hope the detail was illuminative. The repository also contains a Makefile that streamlines building the application and the docker image easier.</p>
-<p>The following targets are defined:</p>
-<p><code>clean-all</code> - cleans out all compilation and build artifacts</p>
-<p><code>clean-build</code> - deletes the ClojureScript and JVM build artifacts. Does not remove any docker build artifacts.</p>
-<p><code>clean-deploy</code> - deletes the docker build artifacts in <code>./docker/deploy</code></p>
-<p><code>build</code> - build the ClojureScript production <code>js</code> file, and the JVM <code>.classes</code> files</p>
-<p><code>docker</code> - builds the docker image</p>
-<p><code>docker/deploy</code> - assembles all the artifacts needed to build the docker image to the <code>docker/deploy</code> directory, and cleans out any unnecessary files and directories</p>
-<p><code>run-local</code> - using the <code>java</code> command runs the application from the application jar in the <code>docker/deploy</code> directory.</p>
+<p>There were quite a number of steps but I hope the detail was illuminative.</p>
+<p>A later post will illustrate how to integrate the build process within the Clojure application directory structure rather than requiring that it be cloned into separate working directory. That particular post will also show how the build and deployment steps can be automated using a simple Makefile.</p>
 
     </div>
 
