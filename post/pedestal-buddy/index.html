@@ -595,7 +595,7 @@
   
   <span class="middot-divider"></span>
   <span class="article-reading-time">
-    21 min read
+    23 min read
   </span>
   
 
@@ -645,7 +645,7 @@
 <p>I provide a brief overview of Pedestal&rsquo;s interceptor model, particularly error-handling, which we&rsquo;ll use to catch and handle any authentication or authorization errors thrown by Buddy.</p>
 <p>I also cover some of Buddy&rsquo;s available functionality; how to decide if access to a web resource should be allowed; and how to respond to the requesting client when access is denied.</p>
 <h2 id="whats-not-covered">What&rsquo;s not covered?</h2>
-<p>For the purpose of this discussion, there is an assumption that the application is using session-based security. However, there is no discussion of how the user session is <strong>actually</strong> populated for use by Pedestal and Buddy.</p>
+<p>For the purpose of this discussion, there is an assumption that the application is using session-based security. However, there is only a short discussion of how the user session is <strong>actually</strong> populated for use by Pedestal and Buddy.</p>
 <p>This is an important topic and if you want to learn more about how to manage the login and session population processes, you can review the following 
 <a href="https://heykieran.github.io/post/pedestal-and-google/" target="_blank" rel="noopener">blog post</a>, where I&rsquo;ve covered it more fully, or the source code for the application, using session based authentication, is available on 
 <a href="https://github.com/heykieran/clj-pedestal-spa/tree/v1.0" target="_blank" rel="noopener">GitHub</a> (tag <strong>v1.0</strong>).</p>
@@ -720,6 +720,57 @@
 <p>The ability to <code>GET</code> from <code>/api/htest</code> is restricted to <strong>users</strong> with the <code>:user</code> <strong>role</strong>, and the ability to <code>POST</code> to the uri is restricted to <strong>users</strong> with the <code>:admin</code> <strong>role</strong>. This is ensured because the <code>build-secured-route-vec-to</code> function inserts the necessary authentication and permission checking interceptors into the uri&rsquo;s interceptor chain before the <code>test-response</code> handler/interceptor.</p>
 <p>This approach is helpful as Pedestal, when seeing a <em>pure</em> handler function as the last entry in an interceptor vector, will convert it to an interceptor. (A <em>pure</em> handler function is a single arity function taking a <code>request</code> as its argument). This means that a handler function can be fully exercised in the REPL before attempting to secure it.</p>
 <p>Using the information encoded in the <strong>routes</strong>, the <strong>permission</strong> table will be constructed by the application at runtime and is used by the interceptor responsible for checking permissions that the authenticated user is in a <strong>role</strong> required to access the resource.</p>
+<h2 id="a-namethe-login-processa-the-log-in-process"><a name="the-login-process"></a> The Log In Process</h2>
+<p>In general, and elliding how claims are actually made, when the user attempts to log in the following sequence of events occurs on the server,</p>
+<ol>
+<li>
+<p>The user asserts a claim that they are a valid user with a particular email address</p>
+</li>
+<li>
+<p>If the server finds this claim to be valid, it will create an <strong>identity-token</strong> map with the following keys</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>:alloc-auth/user-id</code></td>
+<td>The user&rsquo;s id e.g. <code>:admin</code> or <code>:act-user</code></td>
+</tr>
+<tr>
+<td><code>:alloc-auth/token-type</code></td>
+<td>The assertion type made by the user (<code>local</code> or <code>google</code>) and verified by the server</td>
+</tr>
+<tr>
+<td><code>:alloc-auth/token</code></td>
+<td>The user&rsquo;s token. This will contain fields <code>:email</code>, <code>:iss</code>, <code>:aud</code>, <code>:iat</code> and <code>:exp</code>, which are the user&rsquo;s email address, the token&rsquo;s issuer, an audience indicator, the time of the token&rsquo;s issuance, and the time of its expiration.</td>
+</tr>
+<tr>
+<td><code>:alloc-auth/ext-token</code></td>
+<td>A jwt token created and signed by the server. It contains the user&rsquo;s email address and can be used by the client to assert an identity independently of the Pedestal interceptor chain. This may be necessary when a session isn&rsquo;t available i.e. a client can make a request to an api endpoint by including this token in the request&rsquo;s headers, or when a request to an endpoint outside the security context of Pedestal&rsquo;s interceptor chain is made e.g. a websocket connection, which is made at the Jetty Session level.</td>
+</tr>
+<tr>
+<td><code>:alloc-auth/user-session</code></td>
+<td>A keyword that is a combination of the user&rsquo;s id and a monotonically increasing sequence number (e.g. <code>:admin-8</code> for user <code>:admin</code>). Each Pedestal (Ring) session will be associated with a unique <code>user-session</code>.</td>
+</tr>
+</tbody>
+</table>
+</li>
+<li>
+<p>The server then adds the <strong>identity-token</strong> to its record of logged in users, stored in the <code>server.auth.data/alloc-auth-logged-in-users</code> atom.</p>
+<p>This atom retains a list of all the currently logged in users. It is a map where the key is a vector combining the <code>user-id</code> the <code>user-session</code> and a text flag, that is currently always the string &ldquo;single-session-only&rdquo;. The value stored in this map is the <strong>identity-token</strong>.</p>
+</li>
+<li>
+<p>The server will also write the <strong>identity-token</strong> to the Ring session&rsquo;s <code>:identity</code> field</p>
+</li>
+<li>
+<p>The server will send the Ring session&rsquo;s identifier as a secure http-only cookie in a transit response to the client.</p>
+</li>
+</ol>
+<p>This completes the initial client/server login and authentication process.</p>
 <h2 id="the-interceptor-chain">The Interceptor Chain</h2>
 <p>Now, a consideration of the interceptor chain built by the <code>build-secured-route-vec-to</code> function. This function taking as its first argument an interceptor (or handler function) will return a vector of interceptors appropriate for the dual functions of authenticating the <strong>user</strong> and authorizing his/her access to the resource (uri). The function also accepts a number of other options, which we will return to later.</p>
 <ul>
