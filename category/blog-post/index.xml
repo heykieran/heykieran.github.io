@@ -5,12 +5,613 @@
     <link>https://heykieran.github.io/category/blog-post/</link>
       <atom:link href="https://heykieran.github.io/category/blog-post/index.xml" rel="self" type="application/rss+xml" />
     <description>Blog Post</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Wed, 03 Jun 2020 12:40:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Sun, 07 Jun 2020 15:00:00 -0400</lastBuildDate>
     <image>
       <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png</url>
       <title>Blog Post</title>
       <link>https://heykieran.github.io/category/blog-post/</link>
     </image>
+    
+    <item>
+      <title>Asynchronous communication streams between a Pedestal server and a ReFrame SPA</title>
+      <link>https://heykieran.github.io/post/using-sse-and-websockets/</link>
+      <pubDate>Sun, 07 Jun 2020 15:00:00 -0400</pubDate>
+      <guid>https://heykieran.github.io/post/using-sse-and-websockets/</guid>
+      <description>&lt;h1 id=&#34;introduction&#34;&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;In a ReFrame SPA, it&amp;rsquo;s a relatively easy task to asynchronously initiate a backend process using the &lt;code&gt;:http-xhrio&lt;/code&gt; effect handler available in the Reframe library. It&amp;rsquo;s also a rather simple matter of responding to the success and failure events (however they&amp;rsquo;re defined) produced by the back-end process when it &lt;strong&gt;finishes&lt;/strong&gt;. However, what&amp;rsquo;s less obvious is how to capture any &lt;em&gt;system processing&lt;/em&gt; messages issued by the backend process as it progresses, but &lt;strong&gt;before&lt;/strong&gt; it sucessfully completes or fails.&lt;/p&gt;
+&lt;p&gt;Two mechanisms available are &lt;strong&gt;websockets&lt;/strong&gt; or &lt;strong&gt;SSE&lt;/strong&gt;. They will both suffice, but each has its own benefits and drawbacks.&lt;/p&gt;
+&lt;p&gt;A repo with a working version of this code is available on 
+&lt;a href=&#34;https://github.com/heykieran/clj-pedestal-spa/tree/v1.4&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;GitHub&lt;/a&gt; (tag &lt;strong&gt;v1.4&lt;/strong&gt;).&lt;/p&gt;
+&lt;h2 id=&#34;web-sockets&#34;&gt;Web Sockets&lt;/h2&gt;
+&lt;p&gt;WebSockets are an interactive, bi-directional (full duplex), out-of-band communication protocol used for sending messages between web servers and clients. Although WebSocket connections use HTTP ports, WebSockets is not an HTTP protocol. It is a separate TCP protocol with its own semantics. WebSockets enable full-duplex communication between a web client and server, without any need for the polling that is demanded by the half-duplex nature of HTTP.&lt;/p&gt;
+&lt;p&gt;The channel is full-duplex and both endpoints (server and client) are immediately aware of any channel changes, such as a disconnection. A problem with this immediate feedback is that both client and server must respond &lt;em&gt;appropriately&lt;/em&gt;. Was the channel closed, or are there network issues? Should the client attempt to reopen the channel? etc.&lt;/p&gt;
+&lt;p&gt;Most WebSocket implementations also impose a limit to how long they will maintain an open channel which hasn&amp;rsquo;t transmitted or received data recently. Often we would like to use WebSockets with long periods of time between bursts of activity. Therefore, it is the responsibility of the developer to periodically send &lt;em&gt;ping&lt;/em&gt; messages along the channel in order to remain below the time-out interval and ensure the connection is maintained.&lt;/p&gt;
+&lt;h2 id=&#34;sse-server-sent-events&#34;&gt;SSE (Server Sent Events)&lt;/h2&gt;
+&lt;p&gt;Server Sent Event is a &lt;em&gt;push&lt;/em&gt; technology which fully exists within the HTTP world (using content type &lt;code&gt;text/event-stream&lt;/code&gt;). SSE allows a server to send a stream of &lt;em&gt;events&lt;/em&gt; to a web client after the client has established an initial connection. Once a connection has been established the client can use the JavaScript EventSource API to subscribe to the stream, and to receive updates as they are issued by the server. The stream will remain open until explicitly closed by either the server or the client.&lt;/p&gt;
+&lt;p&gt;SSE streams are uni-directional (simplex) from the server to the client and unlike WebSockets there is no facility available for the client to use the channel to transmit to the server. Helpfully, SSE provides for automatic client reconnections - convenient when network issues are encountered.&lt;/p&gt;
+&lt;p&gt;On the other hand, one of the challenges of working with SSE is that generally the server is not aware that a client has disconnected until it attempts to send a message. This can be a resource drain for servers with more than a handful of &lt;em&gt;zombie&lt;/em&gt; clients. Fortunately, most implementations check the &lt;em&gt;liveness&lt;/em&gt; of the connections by automatically issuing periodic heartbeat empty messages to validate the status of the channel.&lt;/p&gt;
+&lt;p&gt;Because both the reconnection and heartbeat features are often part of the base implementation of the SSE protocol, SSE is often simpler in use than WebSockets.&lt;/p&gt;
+&lt;h1 id=&#34;implementations&#34;&gt;Implementations&lt;/h1&gt;
+&lt;h2 id=&#34;background&#34;&gt;Background&lt;/h2&gt;
+&lt;p&gt;For the purpose of this exercise, let&amp;rsquo;s suppose we&amp;rsquo;ve created a Clojure function that performs a number of activities that take some non-trivial amount of time. We&amp;rsquo;ve developed its functionality in the REPL and we&amp;rsquo;re satisfied that it&amp;rsquo;s suitable to be made available at a particular Pedestal controlled URL accessible to our front-end application.&lt;/p&gt;
+&lt;p&gt;However, we would also like to be able to execute this function (via the URL) without stalling our front-end application &lt;strong&gt;and&lt;/strong&gt; to be able to monitor its progress as it proceeds to completion. Ideally, we want to receive processing status update messages from the long-running Clojure function and present them to the user in the browser.&lt;/p&gt;
+&lt;p&gt;Of course, in order to avoid stalling the front-end interface we can initiate processing using the &lt;code&gt;:http-xhrio&lt;/code&gt; effect handler in ReFrame. However, this will send an AJAX request, executing the function in the background, and to some extent making it inaccessible from our application until it either suceeds or fails.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;:http-xhrio&lt;/code&gt; effect handler can also take a &lt;code&gt;:progress-handler&lt;/code&gt; option, but this isn&amp;rsquo;t really suitable for our current requirements.&lt;/p&gt;
+&lt;p&gt;On the client, the approach we&amp;rsquo;ll take is to provide a pair of React component. One that will be used to receive incoming status messages sent by the server, and another to display those messages in the UI. We will implement these components using both WebSockets and SSE streams as the underlying transports.&lt;/p&gt;
+&lt;div class=&#34;alert alert-note&#34;&gt;
+  &lt;div&gt;
+    In order to fully understand the login process initiated by the client and the server&amp;rsquo;s response, particularly the fields returned, it&amp;rsquo;s probably helpful to review some details. I&amp;rsquo;ve covered this in a previous post which is available &lt;a href=&#34;http://heykieran.github.io/post/pedestal-buddy#the-login-process&#34;&gt;here&lt;/a&gt;.
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;h2 id=&#34;client-side-react-components&#34;&gt;Client-Side React Components&lt;/h2&gt;
+&lt;p&gt;We will implement two React components to provide the message logging functionality: a &lt;code&gt;log-holder-element-ui&lt;/code&gt; component and a &lt;code&gt;log-page-ui&lt;/code&gt; component.&lt;/p&gt;
+&lt;div class=&#34;alert alert-note&#34;&gt;
+  &lt;div&gt;
+    &lt;p&gt;The client side implementation in the repo contains separate pairs of components for the two transport types &lt;strong&gt;web-socket&lt;/strong&gt; and &lt;strong&gt;SSE&lt;/strong&gt;. The former is in the &lt;code&gt;web.logs&lt;/code&gt; namespace, the latter in the &lt;code&gt;web.sse-logs&lt;/code&gt; namespace.&lt;/p&gt;
+&lt;p&gt;Apart from some obvious naming diferences in function names, they are more or less interchangable. For this post I will discuss the web-socket implementation. In another post I intend to outline the SSE implementation, and the manner in which it differs from its web socket &lt;em&gt;sibling&lt;/em&gt;.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;h3 id=&#34;component-1---the-log-page-ui-component&#34;&gt;Component #1 - The &lt;code&gt;log-page-ui&lt;/code&gt; Component&lt;/h3&gt;
+&lt;p&gt;The &lt;code&gt;log-page-ui&lt;/code&gt; component is the simpler of the two components. It&amp;rsquo;s primary responsibility is to read the vector of messages stored in ReFrame&amp;rsquo;s state db&amp;rsquo;s &lt;code&gt;:log-messages&lt;/code&gt; field and display it in tabular form.&lt;/p&gt;
+&lt;p&gt;Each message entry in the vector is a map with keys of &lt;code&gt;:source&lt;/code&gt;, &lt;code&gt;:message&lt;/code&gt; and &lt;code&gt;message-type&lt;/code&gt;. The display component subscribes to the &lt;code&gt;:logs/log-messages&lt;/code&gt; subscription, which retrieves the vector, and displays the results. We won&amp;rsquo;t take a detailed look at this component as it&amp;rsquo;s very simple, but you can review it in the accompanying code repo.&lt;/p&gt;
+&lt;h3 id=&#34;component-2---the-log-holder-element-ui-component&#34;&gt;Component #2 - The &lt;code&gt;log-holder-element-ui&lt;/code&gt; Component&lt;/h3&gt;
+&lt;p&gt;The &lt;code&gt;log-holder-element-ui&lt;/code&gt; component is more complex. It is responsible for populating the ReFrame state db&amp;rsquo;s &lt;code&gt;:log-messages&lt;/code&gt; vector. In order to do so, it opens a connection (web-socket or SSE) to the server, reads incoming messages, and transfers them to the state db.&lt;/p&gt;
+&lt;p&gt;The component is also responsible for managing the connection&amp;rsquo;s lifecycle, including any keep-alive requirements and recovery from network errors.&lt;/p&gt;
+&lt;p&gt;The component is a &lt;strong&gt;global&lt;/strong&gt; singleton component and is used to manage and control the SPA&amp;rsquo;s entire logging functionality. It exists throughout the SPA&amp;rsquo;s lifetime, and independently of the user&amp;rsquo;s context in the application, or what action he or she is performing. This simplifies server routing of messages. The server can simply direct them at a client instance. The singleton component will then process the message into the SPA&amp;rsquo;s ReFrame state atom, and the contents can be displayed on demand by the &lt;code&gt;log-page-ui&lt;/code&gt; component.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;log-holder-element-ui&lt;/code&gt; component is implemented, in reagent terms, as a Form-3 component. This is necessary because we require access to React&amp;rsquo;s lifecycle functions. Using these methods we can ensure that our component is a singleton, and that only one instance exists within the application even if the logged-in user changes. The lifecycle methods used (adopting reagent&amp;rsquo;s naming convention) are &lt;code&gt;:component-did-mount&lt;/code&gt;, &lt;code&gt;:component-did-update&lt;/code&gt;, &lt;code&gt;:component-will-unmount&lt;/code&gt; and &lt;code&gt;:reagent-render&lt;/code&gt;.&lt;/p&gt;
+&lt;h4 id=&#34;internal-state&#34;&gt;Internal State&lt;/h4&gt;
+&lt;p&gt;The component maintains two internal state variables &lt;code&gt;log-atom&lt;/code&gt; and &lt;code&gt;timer-atom&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;log-atom&lt;/code&gt; contains a map with keys &lt;code&gt;:user-id&lt;/code&gt;, &lt;code&gt;:session-id&lt;/code&gt;, &lt;code&gt;:connection-uuid&lt;/code&gt; and &lt;code&gt;:web-socket&lt;/code&gt;, and records an association between an application session identifiers and the web socket servicing that session.&lt;/p&gt;
+&lt;p&gt;The SPA as written uses session- and jwt-based authentication. Because a session is shared between browser tabs, the &lt;code&gt;:connection-uuid&lt;/code&gt; value is used to differentiate between tabs within the same session. The &lt;code&gt;:connection-uuid&lt;/code&gt; is determined randomly by the client when it first loads.&lt;/p&gt;
+&lt;div class=&#34;alert alert-note&#34;&gt;
+  &lt;div&gt;
+    &lt;p&gt;There is also an &lt;code&gt;:ext-token&lt;/code&gt; entry associated with the &lt;code&gt;user&lt;/code&gt; map in the ReFrame db.&lt;/p&gt;
+&lt;p&gt;This is part of the application&amp;rsquo;s JWT security implementation. It is used to provide a way to validate the identity of a user in situations where session authentication is not possible.&lt;/p&gt;
+&lt;p&gt;When a user logs in to the system the server will generate and return a signed jwt token. This token can be used by the client in subsequent requests to assert a value for the user&amp;rsquo;s identity.&lt;/p&gt;
+&lt;p&gt;Because web sockets exist in the Jetty session layer rather than the Pedestal interceptor layer we cannor rely on the authentication and authorization interceptors I discussed in a previous post to provide server-side security for web-socket connection attempts.&lt;/p&gt;
+&lt;p&gt;The JWT token (&lt;code&gt;ext-token&lt;/code&gt;) can be used to provide such security.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;p&gt;The &lt;code&gt;timer-atom&lt;/code&gt; is responsible for the keep-alive activities of the connection and will send periodic PING messages to the server, from which it expects a PONG response.&lt;/p&gt;
+&lt;p&gt;A websocket is opened by the component by opening a connection to &lt;code&gt;wss://&amp;lt;hostname&amp;gt;:&amp;lt;port&amp;gt;/ws?session-id=&amp;lt;session-id&amp;gt;&amp;amp;connection-uuid=&amp;lt;connection-uuid&amp;gt;&amp;amp;ext-token=&amp;lt;ext-token&amp;gt;&lt;/code&gt; on the server.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;session-id&lt;/code&gt; value is the session identifier requested by the client, which is correlated with the browser session. Therefore, different tabs will share the same &lt;code&gt;session-id&lt;/code&gt; because they share the same browser session.&lt;/p&gt;
+&lt;p&gt;As mentioned above the &lt;code&gt;connection-uuid&lt;/code&gt; value is a value generated by the client to identify a particular instance of the application (i.e. browser tab) and the &lt;code&gt;ext-token&lt;/code&gt; value is the jwt token returned by the server when a user logs in (see note above).&lt;/p&gt;
+&lt;p&gt;Internally, the server will use the session and connection identifiers to direct messages to the appropriate target client.&lt;/p&gt;
+&lt;p&gt;By convention, the &lt;code&gt;session-id&lt;/code&gt; value is a combination of the user&amp;rsquo;s application user-id (a keyword) and a unique integer e.g. &lt;code&gt;:user-12&lt;/code&gt;. The incorporation of the user-id in the session-id in this manner simplifies the processing of certain security restrictions imposed by the server.&lt;/p&gt;
+&lt;h4 id=&#34;lifecycle-methods&#34;&gt;Lifecycle Methods&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;:component-did-mount&lt;/code&gt; is responsible for initializing the &lt;code&gt;:timer-atom&lt;/code&gt; and starting the keep-alive process.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;:component-did-update&lt;/code&gt; checks if either the current use has logged out, in which case it disconnects the websocket; or if a new user logs in, in which case it creates and connects a new websocket, clears the log messages stored in ReFrame&amp;rsquo;s state db, and finally initializes the internal &lt;code&gt;log-atom&lt;/code&gt; and associates the log session&amp;rsquo;s identifiers with the websocket.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;component-will-unmount&lt;/code&gt; stops the keep-alive process by clearing the the &lt;code&gt;timer-atom&lt;/code&gt; and the &lt;code&gt;log-atom&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;:reagent-render&lt;/code&gt; returns a simple empty &lt;code&gt;DIV&lt;/code&gt; element, which seems odd. However, this element is inserted in the static portion of the SPA&amp;rsquo;s main page and created only once when the SPA is loaded.&lt;/p&gt;
+&lt;p&gt;The implementation of the &lt;code&gt;log-holder-element-ui&lt;/code&gt; component is included below. The &lt;code&gt;:component-did-update&lt;/code&gt; lifecycle method checks whether the user is logging out i.e. there exists a current session (&lt;code&gt;existing-session-id&lt;/code&gt;) and the &lt;code&gt;new-session-id&lt;/code&gt; value is nil; or whether a new user has logged in.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn log-holder-element-ui
+  [{session-id :client-id
+    user-id :user
+    ext-token :ext-token
+    connection-uuid :connection-uuid
+    :as current-logged-in-user}]
+  (let
+    [timer-atom (atom nil)
+     log-atom (atom nil)]
+    (if connection-uuid
+      (ws-utils/connect-ws-for-log
+        user-id
+        session-id
+        connection-uuid
+        ext-token
+        log-atom)
+      (println &amp;quot;No connection-uuid available for logging element &amp;quot;
+               &amp;quot;during creation of component&amp;quot;))
+
+    (reagent/create-class
+      {:display-name
+       :alloc-log-component
+
+       :component-did-mount
+       (fn[this]
+         (println &amp;quot;Log Component didMount&amp;quot;)
+         (reset!
+           timer-atom
+           (js/setInterval
+             (fn[]
+               (if @log-atom
+                 (ws-utils/send-ping
+                   log-atom)))
+             (* 1000 60 2))))
+
+       :component-did-update
+       (fn[this old-argv]
+         (println &amp;quot;Log Component didUpdate&amp;quot;)
+         (let [new-argv (rest (reagent/argv this))
+               {new-session-id :client-id
+                new-connection-uuid :connection-uuid
+                new-user-id :user
+                new-ext-token :ext-token
+                :as current-logged-in-user}
+               (first new-argv)
+               {existing-user-id :user
+                existing-session-id :client-id}
+               (first (rest old-argv))]
+           (if (and (nil? new-session-id) existing-session-id)
+             (do
+               (println
+                 (str &amp;quot;Clearing websocket for user &amp;quot;
+                      (pr-str existing-user-id) &amp;quot;, &amp;quot;
+                      &amp;quot;with client-id &amp;quot;
+                      (pr-str existing-session-id)))
+               (ws-utils/disconnect-web-socket-for-log log-atom)
+               (reset! log-atom nil)))
+           (if new-session-id
+             (do
+               (println
+                 (str &amp;quot;Creating websocket for user &amp;quot;
+                      (pr-str new-user-id)
+                      &amp;quot;with client-id &amp;quot;
+                      (pr-str new-session-id)))
+               (ws-utils/connect-ws-for-log
+                 new-user-id
+                 new-session-id
+                 new-connection-uuid
+                 new-ext-token
+                 log-atom)))))
+
+       :component-will-unmount
+       (fn[this]
+         (println &amp;quot;Log Component willUnmount&amp;quot;)
+         (js/clearInterval @timer-atom)
+         (reset! timer-atom nil)
+         (reset! log-atom nil))
+
+       :reagent-render
+       (fn[{session-id :client-id :as current-logged-in-user}]
+         [:div])})))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The code above uses a number of utility functions to manage the WebSocket connection. We will taken a deeper look at some of them below.&lt;/p&gt;
+&lt;h4 id=&#34;the-web-socket-libary&#34;&gt;The Web Socket Libary&lt;/h4&gt;
+&lt;p&gt;The WebSocket library used by our implementation is 
+&lt;a href=&#34;https://cljdoc.org/d/haslett/haslett/0.1.6/doc/readme&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;haslett&lt;/a&gt;.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(require &#39;[haslett.client :as ws])
+(require &#39;[haslett.format :as fmt])
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;connecting&#34;&gt;Connecting&lt;/h5&gt;
+&lt;p&gt;Connections are handled by the &lt;code&gt;connect-ws-for-log&lt;/code&gt; function, which is passed a &lt;code&gt;user-id&lt;/code&gt;, &lt;code&gt;session-id&lt;/code&gt;, &lt;code&gt;connection-uuid&lt;/code&gt; and &lt;code&gt;ext-token&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;It is also passed (in &lt;code&gt;log-atom&lt;/code&gt;) the internal state atom of the &lt;code&gt;log-holder-element-ui&lt;/code&gt; component.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn connect-ws-for-log
+  [user-id session-id connection-uuid ext-token log-atom]
+  (println &amp;quot;connecting logging websocket for &amp;quot;
+           &amp;quot;user &amp;quot; (pr-str user-id) &amp;quot;, with client-id &amp;quot;
+           (pr-str session-id) &amp;quot;and connection-uuid &amp;quot;
+           (pr-str connection-uuid))
+  (let [{existing-websocket :web-socket
+         existing-user-id :user-id
+         existing-session-id :session-id
+         existing-connection-uuid :connection-uuid}
+        @log-atom]
+    (when existing-websocket
+      (if (ws/connected? existing-websocket)
+        (do
+          (println
+            (str &amp;quot;Web Socket is currently connected. &amp;quot;
+                 &amp;quot;Closing existing connected websocket for &amp;quot;
+                 (keyword (name existing-user-id)
+                          (name existing-session-id))
+                 &amp;quot; with connection-uuid &amp;quot;
+                 (pr-str existing-connection-uuid)))
+          (ws/close existing-websocket))
+        (println
+          (str &amp;quot;Existing websocket to &amp;quot;
+               (keyword (name existing-user-id)
+                        (name existing-session-id)) &amp;quot; &amp;quot;
+               &amp;quot;exists, but it is not connected.&amp;quot;)))))
+  (go
+    (let
+      [web-socket
+       (&amp;lt;! (ws/connect
+             (str
+               api-urls/base-websocket-url
+               &amp;quot;?session-id=&amp;quot; session-id
+               &amp;quot;&amp;amp;ext-token=&amp;quot; ext-token
+               &amp;quot;&amp;amp;connection-uuid=&amp;quot; connection-uuid)
+             {:format fmt/transit}))]
+      (swap!
+        log-atom
+        (fn[o n]
+          (js/console.log
+            &amp;quot;Resetting log details to &amp;quot;
+            (pr-str (select-keys n [:user-id :session-id :connection-uuid]))
+            &amp;quot; from &amp;quot;
+            (pr-str (select-keys o [:user-id :session-id :connection-uuid])))
+          n)
+        {:user-id user-id
+         :session-id session-id
+         :connection-uuid connection-uuid
+         :web-socket web-socket
+         :ext-token ext-token})
+      (go
+        (loop []
+          (when-let
+            [msg (&amp;lt;! (:source web-socket))]
+            (add-message-to-log msg)
+            (recur))))
+      (when-let
+        [msg (&amp;lt;! (:close-status web-socket))]
+        (js/console.log
+          &amp;quot;close-status message received -&amp;gt; &amp;quot; (pr-str msg))
+        (decide-and-restart
+          msg
+          user-id
+          session-id
+          connection-uuid
+          ext-token
+          log-atom)))))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The function first conducts a number of sanity checks, and then, using haslett&amp;rsquo;s &lt;code&gt;connect&lt;/code&gt; function, creates a connection to the url on the server. The result of the call to &lt;code&gt;connect&lt;/code&gt; is stored in the state atom that was passed as an argument.&lt;/p&gt;
+&lt;p&gt;We use Haslett&amp;rsquo;s &lt;code&gt;connect&lt;/code&gt; function to create the underlying WebSocket, and specify that the communication format should be &lt;strong&gt;transit&lt;/strong&gt;.  The &lt;code&gt;connect&lt;/code&gt; function returns a promise channel that will create a map containing four elements: a &lt;code&gt;:socket&lt;/code&gt;, a &lt;code&gt;:source&lt;/code&gt;, a &lt;code&gt;:sink&lt;/code&gt; and a &lt;code&gt;:close-status&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;:socket&lt;/code&gt; entry will contain the WebSocket instance that was created. The &lt;code&gt;:source&lt;/code&gt; and &lt;code&gt;:sink&lt;/code&gt; keys are &lt;code&gt;core.async&lt;/code&gt; channels that we will use for reading and writing to the underlying web socket using Clojure&amp;rsquo;s familiar channel metaphors.&lt;/p&gt;
+&lt;p&gt;Information about the connection is stored in the &lt;code&gt;log-atom&lt;/code&gt; which is a stateful part of the &lt;code&gt;log-holder-element-ui&lt;/code&gt; component. The information stored is all the information supplied by the client to the server and the websocket instance.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;connect-ws-for-log&lt;/code&gt; function then starts the messages processing loop in a &lt;code&gt;go&lt;/code&gt; block.&lt;/p&gt;
+&lt;p&gt;Within the &lt;code&gt;go&lt;/code&gt; block, as each message is received on the &lt;code&gt;:source&lt;/code&gt; channel connected to the WebSocket, the function &lt;code&gt;add-message-to-log&lt;/code&gt; is called and passed the message&amp;rsquo;s contents as an argument. The &lt;code&gt;add-message-to-log&lt;/code&gt; function inserts the message in ReFrame&amp;rsquo;s state db.&lt;/p&gt;
+&lt;p&gt;After the message reading &lt;code&gt;go&lt;/code&gt; loop there is a section of code that responds to close events received in the haslett websocket&amp;rsquo;s &lt;code&gt;:close-status&lt;/code&gt; channel. When a close message event is received, the &lt;code&gt;decide-and-restart&lt;/code&gt; function is called. This function may, depending on the nature of the close event, decide to restart the web socket or not.&lt;/p&gt;
+&lt;h5 id=&#34;disconnecting&#34;&gt;Disconnecting&lt;/h5&gt;
+&lt;p&gt;The &lt;code&gt;disconnect-web-socket-for-log&lt;/code&gt; function, used when we&amp;rsquo;re shutting down the connection, is also passed the state atom. It closes the WebSocket.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn disconnect-web-socket-for-log
+  [log-atom]
+  (let
+    [{web-socket :web-socket
+      user-id :user-id
+      session-id :session-id
+      connection-uuid :connection-uuid} @log-atom]
+    (if (and session-id connection-uuid)
+      (do
+        (println
+          (str &amp;quot;Disconnecting web socket associated with &amp;quot;
+               (pr-str user-id) &amp;quot;/&amp;quot; (pr-str session-id)
+               &amp;quot; with connection uuid &amp;quot;
+               connection-uuid))
+        (if (ws/connected? web-socket)
+          (ws/close web-socket)
+          (println &amp;quot;Unable to close web socket. It&#39;s not connected.&amp;quot;)))
+      (println &amp;quot;No session id available. Declined to issue close().&amp;quot;))))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;web-socket-keep-alive-client&#34;&gt;Web Socket Keep-Alive (Client)&lt;/h5&gt;
+&lt;p&gt;A browser will close a WebSocket if no traffic is seen in some particular interval of time (typically 5 minutes). However, status updates often occur in &lt;em&gt;bursts&lt;/em&gt; with long periods of inactivity between these bursts. When the &lt;code&gt;log-holder-element-ui&lt;/code&gt; component is mounted we start a loop (using &lt;code&gt;js/setInterval&lt;/code&gt;) which calls &lt;code&gt;send-ping&lt;/code&gt;, a function that places (at two minute intervals) a &lt;strong&gt;ping&lt;/strong&gt; message on the channel connected to the WebSocket.&lt;/p&gt;
+&lt;p&gt;This let&amp;rsquo;s the server know that it shouldn&amp;rsquo;t close the connection.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn send-ping[log-atom]
+  (let
+    [{web-socket :web-socket
+      user-id :user-id
+      session-id :session-id
+      ext-token :ext-token
+      connection-uuid :connection-uuid} @log-atom]
+    (if session-id
+      (do
+        (println
+          (str &amp;quot;Sending Ping for &amp;quot;
+               (pr-str user-id) &amp;quot;/&amp;quot;
+               (pr-str session-id)
+               &amp;quot; at &amp;quot; (pr-str connection-uuid)))
+        (if (ws/connected? web-socket)
+          (go
+            (&amp;gt;! (:sink web-socket)
+                {:asys/ping user-id
+                 :asys/session-id session-id
+                 :asys/connection-uuid connection-uuid}))
+          (do
+            (println
+              (str &amp;quot;PING: No websocket connected. &amp;quot;
+                   &amp;quot;Attempting reconnect for &amp;quot;
+                   (pr-str user-id) &amp;quot;/&amp;quot;
+                   (pr-str session-id) &amp;quot;, &amp;quot;
+                   &amp;quot;at &amp;quot; (pr-str connection-uuid)))
+            (connect-ws-for-log
+              user-id
+              session-id
+              connection-uuid
+              ext-token log-atom))))
+      (println &amp;quot;No session id available. No ping sent.&amp;quot;))))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;When the server receives a &lt;strong&gt;ping&lt;/strong&gt; it should respond with a &lt;strong&gt;pong&lt;/strong&gt;. If a web socket isn&amp;rsquo;t connected, and the client expects it to be, the &lt;code&gt;send-ping&lt;/code&gt; will attempt to reopen the connection. This may occur when connectivity is lost and the &lt;code&gt;decide-and-restart&lt;/code&gt; function has declined to reconnect. A consequence of this approach is that if the server goes away for any reason, the client will attempt to reconnect forever.&lt;/p&gt;
+&lt;h3 id=&#34;the-server-side&#34;&gt;The Server Side&lt;/h3&gt;
+&lt;p&gt;Now we turn our attention to how web socket connections are handled by the server.&lt;/p&gt;
+&lt;h4 id=&#34;design-decisions&#34;&gt;Design Decisions&lt;/h4&gt;
+&lt;p&gt;In order to decouple the underlying transport mechanism (e.g. WebSocket or SSE) from the Server&amp;rsquo;s higher-level message creation and dispatch functions we first create a single &lt;code&gt;core.async&lt;/code&gt; channel to which we can write our messages destined for the client.&lt;/p&gt;
+&lt;p&gt;We also create a publication of this channel using a selector of &lt;code&gt;:topic&lt;/code&gt; on the received message map. A helpful side-effect of this approach is that a publication of a &lt;strong&gt;topic&lt;/strong&gt; without a matching subscription is simply dropped. The &lt;strong&gt;topic&lt;/strong&gt; we&amp;rsquo;ll use for our log messages is &lt;code&gt;:log-msg&lt;/code&gt;. Therefore, a message pushed to our channel with the form &lt;code&gt;{... :topic :log-msg ...}&lt;/code&gt; will be forwarded to our publication.&lt;/p&gt;
+&lt;p&gt;Finally, we create a subscription to the &lt;strong&gt;topic&lt;/strong&gt; &lt;code&gt;:log-msg&lt;/code&gt;, and a servicing function to remove messages from it and forward them to the client using whatever transport mechanism is desired. This decoupling serves two purposes: it allows us to change or update our messaging transport without unnecessarily impacting the server&amp;rsquo;s code; and adding other topics is a relatively simple extension.&lt;/p&gt;
+&lt;p&gt;We also need an atom to store the Server&amp;rsquo;s active subscription&amp;rsquo;s channel.&lt;/p&gt;
+&lt;h4 id=&#34;creating-the-channel--publication&#34;&gt;Creating the Channel &amp;amp; Publication&lt;/h4&gt;
+&lt;p&gt;Below is the code that creates the single message channel, its associated publication and the atom
+used to store the subscription&amp;rsquo;s channel.&lt;/p&gt;
+&lt;p&gt;The atom will be initialized correctly at application startup time.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defonce
+  server-messages-channel-destined-for-all-clients
+  (atom nil))
+
+(defonce
+  server-messages-channel
+  (chan 100))
+
+(defonce
+  server-messages-publication
+  (pub server-messages-channel #(:topic %)))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;starting-pedestal-with-websocket-support&#34;&gt;Starting Pedestal with WebSocket Support&lt;/h4&gt;
+&lt;p&gt;In order for Pedestal/Jetty to start with WebSocket support you must, within its service map&amp;rsquo;s &lt;code&gt;::http/container-options&lt;/code&gt; entry, supply a value for the &lt;code&gt;:context-configurator&lt;/code&gt; key.&lt;/p&gt;
+&lt;p&gt;The value should be a reference to a function that configures the Jetty Servlet&amp;rsquo;s web-socket behavior for Pedestal. The function should at least call the &lt;code&gt;add-ws-endpoints&lt;/code&gt; function in the &lt;code&gt;io.pedestal.http.jetty.websockets&lt;/code&gt; namespace. In our application this function is &lt;code&gt;server.messaging.websocket/websocket-configurator-for-jetty&lt;/code&gt; shown below.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn websocket-configurator-for-jetty
+  [jetty-servlet-context]
+  (ws/add-ws-endpoints
+    jetty-servlet-context
+    ws-paths))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;add-ws-endpoints&lt;/code&gt; function takes as parameters a ServletContext and a configuration map. The configuration map passed indicates the websocket uri(s) that Jetty should use as web sockets end-points, and also the functions that should be called when the web socket service receives the &lt;code&gt;on-connect&lt;/code&gt;, &lt;code&gt;on-text&lt;/code&gt;, &lt;code&gt;on-error&lt;/code&gt; and &lt;code&gt;on-close&lt;/code&gt; events.&lt;/p&gt;
+&lt;p&gt;The configuation map used by the applications is shown below&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;{&amp;quot;/ws&amp;quot;
+   {:on-connect
+    (ws/start-ws-connection
+      new-ws-client)
+    :on-text
+    (fn [raw-msg]
+      (process-incoming-text-message raw-msg))
+    :on-binary
+    (fn [payload offset length]
+      (process-incoming-binary-message
+        payload offset length))
+    :on-error
+    (fn [error]
+      (process-error error))
+    :on-close
+    (fn [num-code reason-text]
+      (process-close
+        num-code reason-text))}}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;on-connect&lt;/code&gt; handler uses Pedestal&amp;rsquo;s web-socket functionality to start the connection. Pedestal&amp;rsquo;s &lt;code&gt;start-ws-connection&lt;/code&gt; function takes as its single argument a function that should accept two parameters passed to it by Pedestal: a websocket (of type &lt;code&gt;org.eclipse.jetty.websocket.api.Session&lt;/code&gt;) and an async channel connected to the web socket.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn new-ws-client
+  [^Session ws-session send-ch]
+
+  (log/info
+    (str &amp;quot;new-ws-client: creating new websocket to client with &amp;quot;
+         &amp;quot;uri: &amp;quot; (str (.getRequestURI ^Session ws-session))))
+  (let
+    [ws-endpoint
+     (get-ws-endpoint-from-session ws-session)
+     query-string-map
+     (some-&amp;gt; ws-session
+             (.getRequestURI)
+             (.getQuery)
+             (route/parse-query-string))
+     [session-id ext-token connection-uuid]
+     (as-&amp;gt;
+       query-string-map v
+       (mapv #(get v %) [:session-id :ext-token :connection-uuid]))]
+    (if (and session-id connection-uuid)
+      (let
+        [user-id-from-token
+         (or
+           (auth-utils/get-id-from-ext-token ext-token)
+           :anonymous)
+         message-text (str &amp;quot;new-ws-client: starting web socket &amp;quot;
+                           &amp;quot;with user &amp;quot; (pr-str user-id-from-token) &amp;quot; &amp;quot;
+                           &amp;quot;for session-id &amp;quot; session-id &amp;quot; &amp;quot;
+                           &amp;quot;with connection-uuid &amp;quot; (pr-str connection-uuid) &amp;quot; &amp;quot;
+                           &amp;quot;from &amp;quot; (pr-str ws-endpoint))
+         message (value-&amp;gt;transit-string
+                   {:time (gen-utils/get-local-timestamp-with-offset)
+                    :text message-text})]
+
+        (log/info message-text)
+
+        (async/put!
+          send-ch
+          message)
+
+        (swap! ws-clients
+               assoc
+               (keyword
+                 (name (gen-utils/possible-string-as-keyword user-id-from-token))
+                 (str connection-uuid))
+               [ws-session send-ch
+                (keyword
+                  (name (gen-utils/possible-string-as-keyword user-id-from-token))
+                  (name (gen-utils/possible-string-as-keyword session-id)))]))
+      (log/warn (str &amp;quot;No session-id and connection-uuid &amp;quot;
+                     &amp;quot;supplied for websocket creation.&amp;quot;
+                     &amp;quot;Websocket not created.&amp;quot;)))))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Because web sockets exist in the Jetty session layer rather than the Pedestal routing layer we cannot rely on the authentication and authorization interceptors I discussed in a previous 
+&lt;a href=&#34;https://heykieran.github.io/post/pedestal-buddy/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;post&lt;/a&gt; to provide security for connection attempts at the server&amp;rsquo;s &lt;code&gt;/ws&lt;/code&gt; url. Therefore, before a client is allowed to establish a connection with a particular session-id (which encode the user&amp;rsquo;s id) the jwt token, passed as a query parameter in the connection url, is examined to determine the user&amp;rsquo;s id.&lt;/p&gt;
+&lt;p&gt;We can extract the client’s requested session-id from the url used by the client to request a web-socket connection.&lt;/p&gt;
+&lt;p&gt;As described earlier, the form of the url is &lt;code&gt;wss://&amp;lt;hostname&amp;gt;:&amp;lt;port&amp;gt;/ws?session-id=&amp;lt;session-id&amp;gt;&amp;amp;connection-uuid=&amp;lt;connection-uuid&amp;gt;&amp;amp;ext-token=&amp;lt;ext-token&amp;gt;&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The ws-clients atom is a record of the currently connected web-socket clients. It contains a map keyed by each client’s session-id with values that is a vector of the client’s Session instance and its connected channel.&lt;/p&gt;
+&lt;p&gt;If the user has a valid user id the connection is allowed.&lt;/p&gt;
+&lt;p&gt;In &lt;code&gt;new-ws-client&lt;/code&gt; we extract the session-id requested by the client, sends a short &lt;em&gt;you&amp;rsquo;re connected&lt;/em&gt; message, and add a vector describing the connection to the &lt;code&gt;ws-clients&lt;/code&gt; atom using a key composed of the user&amp;rsquo;s id and the connection-uuid.&lt;/p&gt;
+&lt;p&gt;You&amp;rsquo;ll notice in the &lt;code&gt;on-text&lt;/code&gt; handler function how the server&amp;rsquo;s side of the web socket&amp;rsquo;s &lt;em&gt;keep-alive&lt;/em&gt; functionality is implemented in &lt;code&gt;process-incoming-text-message&lt;/code&gt;.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn process-incoming-text-message
+  [raw-msg]
+  (let
+    [message (transit-string-&amp;gt;value raw-msg)]
+    (log/info &amp;quot;Websocket message received &amp;quot;
+              (pr-str message))
+    (if
+      (and
+        (map? message)
+        (contains? message :asys/ping))
+      (let
+        [{user-id :asys/ping
+          session-id :asys/session-id
+          connection-uuid :asys/connection-uuid} message]
+        (send-messages-to-clients
+          {:msg
+           {:asys/pong user-id
+            :asys/session-id session-id
+            :asys/connection-uuid connection-uuid}
+           :target-client
+           (keyword
+             (name user-id)
+             (str connection-uuid))}))
+      (log/warn
+        (str &amp;quot;Unexpected websocket message received: &amp;quot;
+             (pr-str message) &amp;quot;, type: &amp;quot;
+             (type message))))))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If the server receives a message with an &lt;code&gt;:asys/ping&lt;/code&gt; key, the server automatically responds with an &lt;code&gt;:asys/pong&lt;/code&gt; message. The value of the &lt;code&gt;:asys/ping&lt;/code&gt; entry is the user id, session identifier and connection uuid of the client that sent the ping message and enables the server to direct its response correctly.&lt;/p&gt;
+&lt;h4 id=&#34;starting-the-message-processing&#34;&gt;Starting the Message Processing&lt;/h4&gt;
+&lt;p&gt;When the application starts the web-server, the &lt;code&gt;message-transport&lt;/code&gt; function is also called to initialize the application&amp;rsquo;s messaging functionality. This function takes two parameters, a &lt;code&gt;transport-type&lt;/code&gt; (which can be either &lt;code&gt;:web-socket&lt;/code&gt; or &lt;code&gt;:sse&lt;/code&gt;) and the atom used to store the subscription&amp;rsquo;s channel.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn message-transport
+  [transport-type message-channel-atom]
+  (start-processing-sub transport-type message-channel-atom))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;message-transport&lt;/code&gt; function calls &lt;code&gt;start-processing-sub&lt;/code&gt; which is the function that starts the go loop - accepting messages from the subscription channel and forwarding them to the client(s).&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn start-processing-sub
+  [transport-type message-channel-atom]
+  ;; If the channel already exists, then close it.
+  (when-let [ch (deref message-channel-atom)]
+    (async/close! ch))
+  ;; subscribe a channel to be contained in the
+  ;; server-messages-channel-destined-for-all-clients atom
+  ;; to the server-messages-publication with the topic of
+  ;; :log-msg i.e. anything in the publication with key of
+  ;; :topic and a value of :log-msg
+  (async/sub
+    rlog/server-messages-publication
+    :log-msg
+    (reset! message-channel-atom (async/chan)))
+  ;; start a go-loop that takes messages off the channel in the
+  ;; atom and pass it to the send-messages-to-clients function
+  (log/info &amp;quot;Starting &amp;quot; (pr-str transport-type) &amp;quot; log message loop&amp;quot;)
+  (async/go
+    (loop []
+      (when-let
+        [log-msg (async/&amp;lt;! (deref message-channel-atom))]
+        (send-messages-to-clients transport-type log-msg)
+        (recur)))))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;send-messages-to-clients&lt;/code&gt; function is defined as a multi-method which selects on the &lt;code&gt;transport-type&lt;/code&gt; value and makes sure that the correct &lt;code&gt;send-&lt;/code&gt; function(s) are called for the selected transport type.&lt;/p&gt;
+&lt;p&gt;Essentially, this gets reduced to calling the &lt;code&gt;send-messages-to-client&lt;/code&gt; function in either the &lt;code&gt;server.messaging.websocket&lt;/code&gt; or the &lt;code&gt;server.messaging.sse&lt;/code&gt; namespaces.&lt;/p&gt;
+&lt;h4 id=&#34;sending-messages&#34;&gt;Sending Messages&lt;/h4&gt;
+&lt;p&gt;If we review the &lt;code&gt;send-message-&lt;/code&gt; functions in the &lt;code&gt;server.messaging.websocket&lt;/code&gt; namespace, we can see how they work. (The implementation for SSE is similar, and simpler).&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;send-messages-to-clients&lt;/code&gt; function is the namespace&amp;rsquo;s main public function. It accepts as an argument a map representing the message to be sent. Within the map is an entry &lt;code&gt;:target-client&lt;/code&gt; which indicates the message&amp;rsquo;s destination. The function handles broadcast messages, i.e. messages destined for all connected clients, and also messages destined for only one client. In either case, this function will call the private function &lt;code&gt;send-message-to-client&lt;/code&gt; in the same namespace as many times as is necessary.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn send-messages-to-clients
+  [{message :msg
+    target-client :target-client
+    message-type :message-type
+    :as whole-message}]
+  (if (and (some? target-client)
+           (not= :none target-client))
+    (do
+      (log/info
+        (str &amp;quot;websocket: asked to send message to clients &amp;quot;
+             (pr-str target-client)
+             &amp;quot;, msg: &amp;quot;
+             (pr-str whole-message)))
+      (if (= :all target-client)
+        (doseq
+          [target-client (keys @ws-clients)]
+          (send-message-to-client
+            target-client
+            message
+            message-type))
+        (send-message-to-client
+          target-client
+          message
+          message-type)))))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;send-message-to-client&lt;/code&gt; is shown below. It take a &lt;code&gt;session-id&lt;/code&gt; indicating the message&amp;rsquo;s destination and a &lt;code&gt;message&lt;/code&gt; which is a map.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn- send-message-to-client
+  [connection-identifier message &amp;amp; [message-type]]
+  (log/info
+    (str &amp;quot;Asked to send web-socket message to individual client &amp;quot;
+         (pr-str connection-identifier)
+         &amp;quot;, msg is &amp;quot;
+         (pr-str message)))
+  (if-let
+    [ws-connections (get-ws-conns-for-session-id
+                      @ws-clients
+                      connection-identifier)]
+    (doall
+      (map
+        (fn[connection-key]
+          (if-let
+            [[ws-session send-ch combined-session-id]
+             (get @ws-clients connection-key)]
+            (if (or
+                  (not (.isOpen ws-session))
+                  (ap/closed? send-ch))
+              (do
+                (log/warn
+                  &amp;quot;While trying to send-message-to-client,&amp;quot;
+                  &amp;quot;found websocket or websocket channel was closed.&amp;quot;
+                  &amp;quot;combined-session-id&amp;quot; (pr-str combined-session-id)
+                  &amp;quot;connection-key &amp;quot; (pr-str connection-key))
+                (clean-up-ws-clients))
+              (async/put!
+                send-ch
+                (value-&amp;gt;transit-string
+                  {:time (gen-utils/get-local-timestamp-with-offset)
+                   :text message
+                   :message-type (or message-type :info)})
+                (fn[v]
+                  (log/debug
+                    (str
+                      &amp;quot;put! in send-message-to-client &amp;quot;
+                      (pr-str connection-key)
+                      &amp;quot; returned &amp;quot;
+                      (pr-str v))))))
+            (log/warn (str &amp;quot;Couldn&#39;t find websocket session &amp;quot;
+                           &amp;quot;for client connection &amp;quot;
+                           (pr-str connection-key)
+                           &amp;quot;. Available connections &amp;quot;
+                           &amp;quot;are &amp;quot; (pr-str (keys @ws-clients))))))
+        ws-connections))
+    (log/warn &amp;quot;Couldn&#39;t find any web sockets for target-client&amp;quot;
+              (:target-client message))))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;connecting-the-long-running-clojure-function&#34;&gt;Connecting the long-running Clojure function&lt;/h2&gt;
+&lt;p&gt;Now that the messaging infrastructure is in place we&amp;rsquo;ll turn our attention to &amp;ldquo;instrumenting&amp;rdquo; our clojure function to send status update message.&lt;/p&gt;
+&lt;p&gt;A convenient, but not the only, approach is to leverage Clojure&amp;rsquo;s logging functionality. Often, within a Clojure we will often use calls to &lt;code&gt;log/info&lt;/code&gt; and &lt;code&gt;log/debug&lt;/code&gt; calls to mark and record important processing events. We could take the opportunity to selectively forward some of these messages to the remote client giving it feedback similar to what might be seen if the function was run in a REPL.&lt;/p&gt;
+&lt;p&gt;This is the approach I&amp;rsquo;ve chosen.&lt;/p&gt;
+&lt;p&gt;First I create a macro that can wrap a call to functions in &lt;code&gt;log&lt;/code&gt; namespace, but which can also accept a &lt;code&gt;session-id&lt;/code&gt;.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defmacro with-forward-context
+  ([body]
+   (list `with-forward-context nil body))
+  ([target-id body]
+   (list `with-forward-context target-id body {}))
+  ([target-id body options]
+   (list &#39;do body
+         (list
+           `apply
+           `write-message-to-server-message-channel
+           (concat
+             (list
+               &#39;list
+               (list &#39;clojure.string/join &amp;quot; &amp;quot;
+                     (conj
+                       (map
+                         #(if
+                            (instance? java.lang.Throwable %)
+                            &amp;quot;ERROR&amp;quot;
+                            (list
+                              &#39;clojure.string/trim
+                              (list
+                                `str %)))
+                         (rest body))
+                       &#39;list)))
+             (if target-id
+               (list target-id)
+               &#39;())
+             (if options
+               (list options)
+               &#39;()))))))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then we can selectively wrap any &lt;code&gt;log&lt;/code&gt; calls we like as follow:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(rlog/with-forward-context
+      session-id
+      (log/info &amp;quot;OK&amp;quot;))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The result is that the message is logged in the usual fashion, but a call to &lt;code&gt;write-message-to-server-message-channel&lt;/code&gt; is also made, ensuring that the content of the log message is also sent to the client matching &lt;code&gt;session-id&lt;/code&gt;.&lt;/p&gt;
+&lt;h1 id=&#34;closure&#34;&gt;Closure&lt;/h1&gt;
+&lt;p&gt;Hopefully, if you&amp;rsquo;re attempting to use websockets with your ClojureScript SPA this has been helpful in some small way. In a subsequent post I will discuss implementing a similar for of messaging but using SSE.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Pedestal, Buddy and Security</title>
