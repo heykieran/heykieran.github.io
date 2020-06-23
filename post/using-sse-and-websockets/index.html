@@ -1,0 +1,1598 @@
+<!DOCTYPE html><html lang="en-us" >
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="generator" content="Source Themes Academic 4.8.0">
+
+  
+
+  
+  
+  
+  
+  
+    
+    
+    
+  
+  
+
+  <meta name="author" content="Kieran Owens">
+
+  
+  
+  
+    
+  
+  <meta name="description" content="For long-running server processes possibly initiated by an AJAX call from an SPA client, it&#39;s often desirable to be able to receive (and display) status update messages (issued by the server during processing) in your front-end application&#39;s UI. In this piece I will discuss the two options of using **websockets** and **SSE** (server sent events), and, with code, show how to implement them using Clojure and ClojureScript.">
+
+  
+  <link rel="alternate" hreflang="en-us" href="https://heykieran.github.io/post/using-sse-and-websockets/">
+
+  
+
+
+  
+  
+  
+  <meta name="theme-color" content="#2962ff">
+  
+
+  
+  
+  
+  <script src="/js/mathjax-config.js"></script>
+  
+
+  
+  
+  
+  
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/academicons/1.8.6/css/academicons.min.css" integrity="sha256-uFVgMKfistnJAfoCUQigIl+JfUaP47GrRKjf6CTPVmw=" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0-1/css/all.min.css" integrity="sha256-4w9DunooKSr3MFXHXWyFER38WmPdm361bQS/2KUWZbU=" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+    
+    
+    
+      
+    
+    
+      
+      
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin="anonymous" title="hl-light">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin="anonymous" title="hl-dark" disabled>
+      
+    
+
+    
+
+    
+
+    
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.1.2/lazysizes.min.js" integrity="sha256-Md1qLToewPeKjfAHU1zyPwOutccPAm5tahnaw7Osw0A=" crossorigin="anonymous" async></script>
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" integrity="" crossorigin="anonymous" async></script>
+      
+    
+      
+
+      
+      
+
+      
+    
+
+  
+
+  
+  
+  
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Montserrat:400,700%7CRoboto:400,400italic,700%7CRoboto+Mono&display=swap">
+  
+
+  
+  
+  
+  
+  <link rel="stylesheet" href="/css/academic.css">
+
+  
+
+
+
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-153619296-3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+
+  function gtag() {
+      dataLayer.push(arguments);
+  }
+
+  function trackOutboundLink(url, target) {
+    gtag('event', 'click', {
+         'event_category': 'outbound',
+         'event_label': url,
+         'transport_type': 'beacon',
+         'event_callback': function () {
+           if (target !== '_blank') {
+             document.location = url;
+           }
+         }
+    });
+    console.debug("Outbound link clicked: " + url);
+  }
+
+  function onClickCallback(event) {
+    if ((event.target.tagName !== 'A') || (event.target.host === window.location.host)) {
+      return;
+    }
+    trackOutboundLink(event.target, event.target.getAttribute('target'));  
+  }
+
+  gtag('js', new Date());
+  gtag('config', 'UA-153619296-3', {});
+
+  
+  document.addEventListener('click', onClickCallback, false);
+</script>
+
+
+  
+
+
+  
+  
+
+  
+
+  <link rel="manifest" href="/index.webmanifest">
+  <link rel="icon" type="image/png" href="/images/icon_hu4daeebf65b4de862d319721e891ef302_24365_32x32_fill_lanczos_center_2.png">
+  <link rel="apple-touch-icon" type="image/png" href="/images/icon_hu4daeebf65b4de862d319721e891ef302_24365_192x192_fill_lanczos_center_2.png">
+
+  <link rel="canonical" href="https://heykieran.github.io/post/using-sse-and-websockets/">
+
+  
+  
+  
+  
+  
+  
+  
+    
+    
+  
+  
+  <meta property="twitter:card" content="summary">
+  
+  <meta property="twitter:site" content="@TimpsonGray">
+  <meta property="twitter:creator" content="@TimpsonGray">
+  
+  <meta property="og:site_name" content="heykieran Code Notes">
+  <meta property="og:url" content="https://heykieran.github.io/post/using-sse-and-websockets/">
+  <meta property="og:title" content="Asynchronous communication streams between a Pedestal server and a ReFrame SPA | heykieran Code Notes">
+  <meta property="og:description" content="For long-running server processes possibly initiated by an AJAX call from an SPA client, it&#39;s often desirable to be able to receive (and display) status update messages (issued by the server during processing) in your front-end application&#39;s UI. In this piece I will discuss the two options of using **websockets** and **SSE** (server sent events), and, with code, show how to implement them using Clojure and ClojureScript."><meta property="og:image" content="https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png">
+  <meta property="twitter:image" content="https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png"><meta property="og:locale" content="en-us">
+  
+    
+      <meta property="article:published_time" content="2020-06-07T15:00:00-04:00">
+    
+    <meta property="article:modified_time" content="2020-06-07T15:00:00-04:00">
+  
+
+  
+
+
+    
+
+
+
+
+
+
+  
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://heykieran.github.io/post/using-sse-and-websockets/"
+  },
+  "headline": "Asynchronous communication streams between a Pedestal server and a ReFrame SPA",
+  
+  "datePublished": "2020-06-07T15:00:00-04:00",
+  "dateModified": "2020-06-07T15:00:00-04:00",
+  
+  "author": {
+    "@type": "Person",
+    "name": "Kieran Owens"
+  },
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "Timpson Gray",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_192x192_fit_lanczos_2.png"
+    }
+  },
+  "description": "For long-running server processes possibly initiated by an AJAX call from an SPA client, it's often desirable to be able to receive (and display) status update messages (issued by the server during processing) in your front-end application's UI. In this piece I will discuss the two options of using **websockets** and **SSE** (server sent events), and, with code, show how to implement them using Clojure and ClojureScript."
+}
+</script>
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+
+  <title>Asynchronous communication streams between a Pedestal server and a ReFrame SPA | heykieran Code Notes</title>
+
+</head>
+
+<body id="top" data-spy="scroll" data-offset="70" data-target="#TableOfContents" >
+
+  <aside class="search-results" id="search">
+  <div class="container">
+    <section class="search-header">
+
+      <div class="row no-gutters justify-content-between mb-3">
+        <div class="col-6">
+          <h1>Search</h1>
+        </div>
+        <div class="col-6 col-search-close">
+          <a class="js-search" href="#"><i class="fas fa-times-circle text-muted" aria-hidden="true"></i></a>
+        </div>
+      </div>
+
+      <div id="search-box">
+        
+        <input name="q" id="search-query" placeholder="Search..." autocapitalize="off"
+        autocomplete="off" autocorrect="off" spellcheck="false" type="search">
+        
+      </div>
+
+    </section>
+    <section class="section-search-results">
+
+      <div id="search-hits">
+        
+      </div>
+
+    </section>
+  </div>
+</aside>
+
+
+  
+
+
+
+
+
+
+  
+
+
+<nav class="navbar navbar-expand-lg navbar-light compensate-for-scrollbar" id="navbar-main">
+  <div class="container">
+
+    
+    <div class="d-none d-lg-inline-flex">
+      <a class="navbar-brand" href="/"><img src="/images/logo_hu40a566661c85156769430146dbdc8595_41816_0x70_resize_lanczos_2.png" alt="heykieran Code Notes"></a>
+    </div>
+    
+
+    
+    <button type="button" class="navbar-toggler" data-toggle="collapse"
+            data-target="#navbar-content" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span><i class="fas fa-bars"></i></span>
+    </button>
+    
+
+    
+    <div class="navbar-brand-mobile-wrapper d-inline-flex d-lg-none">
+      <a class="navbar-brand" href="/"><img src="/images/logo_hu40a566661c85156769430146dbdc8595_41816_0x70_resize_lanczos_2.png" alt="heykieran Code Notes"></a>
+    </div>
+    
+
+    
+    
+    <div class="navbar-collapse main-menu-item collapse justify-content-start" id="navbar-content">
+
+      
+      <ul class="navbar-nav d-md-inline-flex">
+        
+
+        
+
+        
+        
+        
+
+        
+        
+        
+        
+        
+        
+
+        <li class="nav-item">
+          <a class="nav-link  active" href="/"><span>Home</span></a>
+        </li>
+
+        
+        
+
+        
+
+        
+        
+        
+          
+        
+
+        
+        
+        
+        
+        
+        
+          
+          
+          
+            
+          
+          
+        
+
+        <li class="nav-item">
+          <a class="nav-link " href="/#posts"><span>Posts</span></a>
+        </li>
+
+        
+        
+
+        
+
+        
+        
+        
+          
+        
+
+        
+        
+        
+        
+        
+        
+
+        <li class="nav-item">
+          <a class="nav-link " href="/author/kieran-owens"><span>Contact</span></a>
+        </li>
+
+        
+        
+
+      
+
+        
+      </ul>
+    </div>
+
+    <ul class="nav-icons navbar-nav flex-row ml-auto d-flex pl-md-2">
+      
+      <li class="nav-item">
+        <a class="nav-link js-search" href="#" aria-label="Search"><i class="fas fa-search" aria-hidden="true"></i></a>
+      </li>
+      
+
+      
+      <li class="nav-item dropdown theme-dropdown">
+        <a href="#" class="nav-link js-theme-selector" data-toggle="dropdown" aria-haspopup="true">
+          <i class="fas fa-palette" aria-hidden="true"></i>
+        </a>
+        <div class="dropdown-menu">
+          <a href="#" class="dropdown-item js-set-theme-light">
+            <span>Light</span>
+          </a>
+          <a href="#" class="dropdown-item js-set-theme-dark">
+            <span>Dark</span>
+          </a>
+          <a href="#" class="dropdown-item js-set-theme-auto">
+            <span>Automatic</span>
+          </a>
+        </div>
+      </li>
+      
+
+      
+
+    </ul>
+
+  </div>
+</nav>
+
+
+  <article class="article">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+  
+  
+<div class="article-container pt-3">
+  <h1>Asynchronous communication streams between a Pedestal server and a ReFrame SPA</h1>
+
+  
+  <p class="page-subtitle">How to receive and process <em>status update</em> messages sent from a Pedestal back-end application to a ReFrame front-end application during long-running server processing</p>
+  
+
+  
+    
+
+
+<div class="article-metadata">
+
+  
+  
+  
+  
+  <div>
+    
+
+  
+  <span><a href="/author/kieran-owens/">Kieran Owens</a></span>
+  </div>
+  
+  
+
+  
+  <span class="article-date">
+    
+    
+      
+    
+    Jun 7, 2020
+  </span>
+  
+
+  
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    21 min read
+  </span>
+  
+
+  
+  
+  
+  <span class="middot-divider"></span>
+  <a href="/post/using-sse-and-websockets/#disqus_thread"></a>
+  
+
+  
+  
+  <span class="middot-divider"></span>
+  <span class="article-categories">
+    <i class="fas fa-folder mr-1"></i><a href="/category/blog-post/">Blog Post</a></span>
+  
+
+</div>
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+</div>
+
+
+
+  <div class="article-container">
+
+    <div class="article-style">
+      <h1 id="introduction">Introduction</h1>
+<p>In a ReFrame SPA, it&rsquo;s a relatively easy task to asynchronously initiate a backend process using the <code>:http-xhrio</code> effect handler available in the Reframe library. It&rsquo;s also a rather simple matter of responding to the success and failure events (however they&rsquo;re defined) produced by the back-end process when it <strong>finishes</strong>. However, what&rsquo;s less obvious is how to capture any <em>system processing</em> messages issued by the backend process as it progresses, but <strong>before</strong> it sucessfully completes or fails.</p>
+<p>Two mechanisms available are <strong>websockets</strong> or <strong>SSE</strong>. They will both suffice, but each has its own benefits and drawbacks.</p>
+<p>A repo with a working version of this code is available on 
+<a href="https://github.com/heykieran/clj-pedestal-spa/tree/v1.4" target="_blank" rel="noopener">GitHub</a> (tag <strong>v1.4</strong>).</p>
+<h2 id="web-sockets">Web Sockets</h2>
+<p>WebSockets are an interactive, bi-directional (full duplex), out-of-band communication protocol used for sending messages between web servers and clients. Although WebSocket connections use HTTP ports, WebSockets is not an HTTP protocol. It is a separate TCP protocol with its own semantics. WebSockets enable full-duplex communication between a web client and server, without any need for the polling that is demanded by the half-duplex nature of HTTP.</p>
+<p>The channel is full-duplex and both endpoints (server and client) are immediately aware of any channel changes, such as a disconnection. A problem with this immediate feedback is that both client and server must respond <em>appropriately</em>. Was the channel closed, or are there network issues? Should the client attempt to reopen the channel? etc.</p>
+<p>Most WebSocket implementations also impose a limit to how long they will maintain an open channel which hasn&rsquo;t transmitted or received data recently. Often we would like to use WebSockets with long periods of time between bursts of activity. Therefore, it is the responsibility of the developer to periodically send <em>ping</em> messages along the channel in order to remain below the time-out interval and ensure the connection is maintained.</p>
+<h2 id="sse-server-sent-events">SSE (Server Sent Events)</h2>
+<p>Server Sent Event is a <em>push</em> technology which fully exists within the HTTP world (using content type <code>text/event-stream</code>). SSE allows a server to send a stream of <em>events</em> to a web client after the client has established an initial connection. Once a connection has been established the client can use the JavaScript EventSource API to subscribe to the stream, and to receive updates as they are issued by the server. The stream will remain open until explicitly closed by either the server or the client.</p>
+<p>SSE streams are uni-directional (simplex) from the server to the client and unlike WebSockets there is no facility available for the client to use the channel to transmit to the server. Helpfully, SSE provides for automatic client reconnections - convenient when network issues are encountered.</p>
+<p>On the other hand, one of the challenges of working with SSE is that generally the server is not aware that a client has disconnected until it attempts to send a message. This can be a resource drain for servers with more than a handful of <em>zombie</em> clients. Fortunately, most implementations check the <em>liveness</em> of the connections by automatically issuing periodic heartbeat empty messages to validate the status of the channel.</p>
+<p>Because both the reconnection and heartbeat features are often part of the base implementation of the SSE protocol, SSE is often simpler in use than WebSockets.</p>
+<h1 id="implementations">Implementations</h1>
+<h2 id="background">Background</h2>
+<p>For the purpose of this exercise, let&rsquo;s suppose we&rsquo;ve created a Clojure function that performs a number of activities that take some non-trivial amount of time. We&rsquo;ve developed its functionality in the REPL and we&rsquo;re satisfied that it&rsquo;s suitable to be made available at a particular Pedestal controlled URL accessible to our front-end application.</p>
+<p>However, we would also like to be able to execute this function (via the URL) without stalling our front-end application <strong>and</strong> to be able to monitor its progress as it proceeds to completion. Ideally, we want to receive processing status update messages from the long-running Clojure function and present them to the user in the browser.</p>
+<p>Of course, in order to avoid stalling the front-end interface we can initiate processing using the <code>:http-xhrio</code> effect handler in ReFrame. However, this will send an AJAX request, executing the function in the background, and to some extent making it inaccessible from our application until it either suceeds or fails.</p>
+<p>The <code>:http-xhrio</code> effect handler can also take a <code>:progress-handler</code> option, but this isn&rsquo;t really suitable for our current requirements.</p>
+<p>On the client, the approach we&rsquo;ll take is to provide a pair of React component. One that will be used to receive incoming status messages sent by the server, and another to display those messages in the UI. We will implement these components using both WebSockets and SSE streams as the underlying transports.</p>
+<div class="alert alert-note">
+  <div>
+    In order to fully understand the login process initiated by the client and the server&rsquo;s response, particularly the fields returned, it&rsquo;s probably helpful to review some details. I&rsquo;ve covered this in a previous post which is available <a href="http://heykieran.github.io/post/pedestal-buddy#the-login-process">here</a>.
+  </div>
+</div>
+<h2 id="client-side-react-components">Client-Side React Components</h2>
+<p>We will implement two React components to provide the message logging functionality: a <code>log-holder-element-ui</code> component and a <code>log-page-ui</code> component.</p>
+<div class="alert alert-note">
+  <div>
+    <p>The client side implementation in the repo contains separate pairs of components for the two transport types <strong>web-socket</strong> and <strong>SSE</strong>. The former is in the <code>web.logs</code> namespace, the latter in the <code>web.sse-logs</code> namespace.</p>
+<p>Apart from some obvious naming diferences in function names, they are more or less interchangable. For this post I will discuss the web-socket implementation. In another post I intend to outline the SSE implementation, and the manner in which it differs from its web socket <em>sibling</em>.</p>
+  </div>
+</div>
+<h3 id="component-1---the-log-page-ui-component">Component #1 - The <code>log-page-ui</code> Component</h3>
+<p>The <code>log-page-ui</code> component is the simpler of the two components. It&rsquo;s primary responsibility is to read the vector of messages stored in ReFrame&rsquo;s state db&rsquo;s <code>:log-messages</code> field and display it in tabular form.</p>
+<p>Each message entry in the vector is a map with keys of <code>:source</code>, <code>:message</code> and <code>message-type</code>. The display component subscribes to the <code>:logs/log-messages</code> subscription, which retrieves the vector, and displays the results. We won&rsquo;t take a detailed look at this component as it&rsquo;s very simple, but you can review it in the accompanying code repo.</p>
+<h3 id="component-2---the-log-holder-element-ui-component">Component #2 - The <code>log-holder-element-ui</code> Component</h3>
+<p>The <code>log-holder-element-ui</code> component is more complex. It is responsible for populating the ReFrame state db&rsquo;s <code>:log-messages</code> vector. In order to do so, it opens a connection (web-socket or SSE) to the server, reads incoming messages, and transfers them to the state db.</p>
+<p>The component is also responsible for managing the connection&rsquo;s lifecycle, including any keep-alive requirements and recovery from network errors.</p>
+<p>The component is a <strong>global</strong> singleton component and is used to manage and control the SPA&rsquo;s entire logging functionality. It exists throughout the SPA&rsquo;s lifetime, and independently of the user&rsquo;s context in the application, or what action he or she is performing. This simplifies server routing of messages. The server can simply direct them at a client instance. The singleton component will then process the message into the SPA&rsquo;s ReFrame state atom, and the contents can be displayed on demand by the <code>log-page-ui</code> component.</p>
+<p>The <code>log-holder-element-ui</code> component is implemented, in reagent terms, as a Form-3 component. This is necessary because we require access to React&rsquo;s lifecycle functions. Using these methods we can ensure that our component is a singleton, and that only one instance exists within the application even if the logged-in user changes. The lifecycle methods used (adopting reagent&rsquo;s naming convention) are <code>:component-did-mount</code>, <code>:component-did-update</code>, <code>:component-will-unmount</code> and <code>:reagent-render</code>.</p>
+<h4 id="internal-state">Internal State</h4>
+<p>The component maintains two internal state variables <code>log-atom</code> and <code>timer-atom</code>.</p>
+<p>The <code>log-atom</code> contains a map with keys <code>:user-id</code>, <code>:session-id</code>, <code>:connection-uuid</code> and <code>:web-socket</code>, and records an association between an application session identifiers and the web socket servicing that session.</p>
+<p>The SPA as written uses session- and jwt-based authentication. Because a session is shared between browser tabs, the <code>:connection-uuid</code> value is used to differentiate between tabs within the same session. The <code>:connection-uuid</code> is determined randomly by the client when it first loads.</p>
+<div class="alert alert-note">
+  <div>
+    <p>There is also an <code>:ext-token</code> entry associated with the <code>user</code> map in the ReFrame db.</p>
+<p>This is part of the application&rsquo;s JWT security implementation. It is used to provide a way to validate the identity of a user in situations where session authentication is not possible.</p>
+<p>When a user logs in to the system the server will generate and return a signed jwt token. This token can be used by the client in subsequent requests to assert a value for the user&rsquo;s identity.</p>
+<p>Because web sockets exist in the Jetty session layer rather than the Pedestal interceptor layer we cannor rely on the authentication and authorization interceptors I discussed in a previous post to provide server-side security for web-socket connection attempts.</p>
+<p>The JWT token (<code>ext-token</code>) can be used to provide such security.</p>
+  </div>
+</div>
+<p>The <code>timer-atom</code> is responsible for the keep-alive activities of the connection and will send periodic PING messages to the server, from which it expects a PONG response.</p>
+<p>A websocket is opened by the component by opening a connection to <code>wss://&lt;hostname&gt;:&lt;port&gt;/ws?session-id=&lt;session-id&gt;&amp;connection-uuid=&lt;connection-uuid&gt;&amp;ext-token=&lt;ext-token&gt;</code> on the server.</p>
+<p>The <code>session-id</code> value is the session identifier requested by the client, which is correlated with the browser session. Therefore, different tabs will share the same <code>session-id</code> because they share the same browser session.</p>
+<p>As mentioned above the <code>connection-uuid</code> value is a value generated by the client to identify a particular instance of the application (i.e. browser tab) and the <code>ext-token</code> value is the jwt token returned by the server when a user logs in (see note above).</p>
+<p>Internally, the server will use the session and connection identifiers to direct messages to the appropriate target client.</p>
+<p>By convention, the <code>session-id</code> value is a combination of the user&rsquo;s application user-id (a keyword) and a unique integer e.g. <code>:user-12</code>. The incorporation of the user-id in the session-id in this manner simplifies the processing of certain security restrictions imposed by the server.</p>
+<h4 id="lifecycle-methods">Lifecycle Methods</h4>
+<p><code>:component-did-mount</code> is responsible for initializing the <code>:timer-atom</code> and starting the keep-alive process.</p>
+<p><code>:component-did-update</code> checks if either the current use has logged out, in which case it disconnects the websocket; or if a new user logs in, in which case it creates and connects a new websocket, clears the log messages stored in ReFrame&rsquo;s state db, and finally initializes the internal <code>log-atom</code> and associates the log session&rsquo;s identifiers with the websocket.</p>
+<p><code>component-will-unmount</code> stops the keep-alive process by clearing the the <code>timer-atom</code> and the <code>log-atom</code>.</p>
+<p><code>:reagent-render</code> returns a simple empty <code>DIV</code> element, which seems odd. However, this element is inserted in the static portion of the SPA&rsquo;s main page and created only once when the SPA is loaded.</p>
+<p>The implementation of the <code>log-holder-element-ui</code> component is included below. The <code>:component-did-update</code> lifecycle method checks whether the user is logging out i.e. there exists a current session (<code>existing-session-id</code>) and the <code>new-session-id</code> value is nil; or whether a new user has logged in.</p>
+<pre><code class="language-clojure">(defn log-holder-element-ui
+  [{session-id :client-id
+    user-id :user
+    ext-token :ext-token
+    connection-uuid :connection-uuid
+    :as current-logged-in-user}]
+  (let
+    [timer-atom (atom nil)
+     log-atom (atom nil)]
+    (if connection-uuid
+      (ws-utils/connect-ws-for-log
+        user-id
+        session-id
+        connection-uuid
+        ext-token
+        log-atom)
+      (println &quot;No connection-uuid available for logging element &quot;
+               &quot;during creation of component&quot;))
+
+    (reagent/create-class
+      {:display-name
+       :alloc-log-component
+
+       :component-did-mount
+       (fn[this]
+         (println &quot;Log Component didMount&quot;)
+         (reset!
+           timer-atom
+           (js/setInterval
+             (fn[]
+               (if @log-atom
+                 (ws-utils/send-ping
+                   log-atom)))
+             (* 1000 60 2))))
+
+       :component-did-update
+       (fn[this old-argv]
+         (println &quot;Log Component didUpdate&quot;)
+         (let [new-argv (rest (reagent/argv this))
+               {new-session-id :client-id
+                new-connection-uuid :connection-uuid
+                new-user-id :user
+                new-ext-token :ext-token
+                :as current-logged-in-user}
+               (first new-argv)
+               {existing-user-id :user
+                existing-session-id :client-id}
+               (first (rest old-argv))]
+           (if (and (nil? new-session-id) existing-session-id)
+             (do
+               (println
+                 (str &quot;Clearing websocket for user &quot;
+                      (pr-str existing-user-id) &quot;, &quot;
+                      &quot;with client-id &quot;
+                      (pr-str existing-session-id)))
+               (ws-utils/disconnect-web-socket-for-log log-atom)
+               (reset! log-atom nil)))
+           (if new-session-id
+             (do
+               (println
+                 (str &quot;Creating websocket for user &quot;
+                      (pr-str new-user-id)
+                      &quot;with client-id &quot;
+                      (pr-str new-session-id)))
+               (ws-utils/connect-ws-for-log
+                 new-user-id
+                 new-session-id
+                 new-connection-uuid
+                 new-ext-token
+                 log-atom)))))
+
+       :component-will-unmount
+       (fn[this]
+         (println &quot;Log Component willUnmount&quot;)
+         (js/clearInterval @timer-atom)
+         (reset! timer-atom nil)
+         (reset! log-atom nil))
+
+       :reagent-render
+       (fn[{session-id :client-id :as current-logged-in-user}]
+         [:div])})))
+</code></pre>
+<p>The code above uses a number of utility functions to manage the WebSocket connection. We will taken a deeper look at some of them below.</p>
+<h4 id="the-web-socket-libary">The Web Socket Libary</h4>
+<p>The WebSocket library used by our implementation is 
+<a href="https://cljdoc.org/d/haslett/haslett/0.1.6/doc/readme" target="_blank" rel="noopener">haslett</a>.</p>
+<pre><code class="language-clojure">(require '[haslett.client :as ws])
+(require '[haslett.format :as fmt])
+</code></pre>
+<h5 id="connecting">Connecting</h5>
+<p>Connections are handled by the <code>connect-ws-for-log</code> function, which is passed a <code>user-id</code>, <code>session-id</code>, <code>connection-uuid</code> and <code>ext-token</code>.</p>
+<p>It is also passed (in <code>log-atom</code>) the internal state atom of the <code>log-holder-element-ui</code> component.</p>
+<pre><code class="language-clojure">(defn connect-ws-for-log
+  [user-id session-id connection-uuid ext-token log-atom]
+  (println &quot;connecting logging websocket for &quot;
+           &quot;user &quot; (pr-str user-id) &quot;, with client-id &quot;
+           (pr-str session-id) &quot;and connection-uuid &quot;
+           (pr-str connection-uuid))
+  (let [{existing-websocket :web-socket
+         existing-user-id :user-id
+         existing-session-id :session-id
+         existing-connection-uuid :connection-uuid}
+        @log-atom]
+    (when existing-websocket
+      (if (ws/connected? existing-websocket)
+        (do
+          (println
+            (str &quot;Web Socket is currently connected. &quot;
+                 &quot;Closing existing connected websocket for &quot;
+                 (keyword (name existing-user-id)
+                          (name existing-session-id))
+                 &quot; with connection-uuid &quot;
+                 (pr-str existing-connection-uuid)))
+          (ws/close existing-websocket))
+        (println
+          (str &quot;Existing websocket to &quot;
+               (keyword (name existing-user-id)
+                        (name existing-session-id)) &quot; &quot;
+               &quot;exists, but it is not connected.&quot;)))))
+  (go
+    (let
+      [web-socket
+       (&lt;! (ws/connect
+             (str
+               api-urls/base-websocket-url
+               &quot;?session-id=&quot; session-id
+               &quot;&amp;ext-token=&quot; ext-token
+               &quot;&amp;connection-uuid=&quot; connection-uuid)
+             {:format fmt/transit}))]
+      (swap!
+        log-atom
+        (fn[o n]
+          (js/console.log
+            &quot;Resetting log details to &quot;
+            (pr-str (select-keys n [:user-id :session-id :connection-uuid]))
+            &quot; from &quot;
+            (pr-str (select-keys o [:user-id :session-id :connection-uuid])))
+          n)
+        {:user-id user-id
+         :session-id session-id
+         :connection-uuid connection-uuid
+         :web-socket web-socket
+         :ext-token ext-token})
+      (go
+        (loop []
+          (when-let
+            [msg (&lt;! (:source web-socket))]
+            (add-message-to-log msg)
+            (recur))))
+      (when-let
+        [msg (&lt;! (:close-status web-socket))]
+        (js/console.log
+          &quot;close-status message received -&gt; &quot; (pr-str msg))
+        (decide-and-restart
+          msg
+          user-id
+          session-id
+          connection-uuid
+          ext-token
+          log-atom)))))
+</code></pre>
+<p>The function first conducts a number of sanity checks, and then, using haslett&rsquo;s <code>connect</code> function, creates a connection to the url on the server. The result of the call to <code>connect</code> is stored in the state atom that was passed as an argument.</p>
+<p>We use Haslett&rsquo;s <code>connect</code> function to create the underlying WebSocket, and specify that the communication format should be <strong>transit</strong>.  The <code>connect</code> function returns a promise channel that will create a map containing four elements: a <code>:socket</code>, a <code>:source</code>, a <code>:sink</code> and a <code>:close-status</code>.</p>
+<p>The <code>:socket</code> entry will contain the WebSocket instance that was created. The <code>:source</code> and <code>:sink</code> keys are <code>core.async</code> channels that we will use for reading and writing to the underlying web socket using Clojure&rsquo;s familiar channel metaphors.</p>
+<p>Information about the connection is stored in the <code>log-atom</code> which is a stateful part of the <code>log-holder-element-ui</code> component. The information stored is all the information supplied by the client to the server and the websocket instance.</p>
+<p>The <code>connect-ws-for-log</code> function then starts the messages processing loop in a <code>go</code> block.</p>
+<p>Within the <code>go</code> block, as each message is received on the <code>:source</code> channel connected to the WebSocket, the function <code>add-message-to-log</code> is called and passed the message&rsquo;s contents as an argument. The <code>add-message-to-log</code> function inserts the message in ReFrame&rsquo;s state db.</p>
+<p>After the message reading <code>go</code> loop there is a section of code that responds to close events received in the haslett websocket&rsquo;s <code>:close-status</code> channel. When a close message event is received, the <code>decide-and-restart</code> function is called. This function may, depending on the nature of the close event, decide to restart the web socket or not.</p>
+<h5 id="disconnecting">Disconnecting</h5>
+<p>The <code>disconnect-web-socket-for-log</code> function, used when we&rsquo;re shutting down the connection, is also passed the state atom. It closes the WebSocket.</p>
+<pre><code class="language-clojure">(defn disconnect-web-socket-for-log
+  [log-atom]
+  (let
+    [{web-socket :web-socket
+      user-id :user-id
+      session-id :session-id
+      connection-uuid :connection-uuid} @log-atom]
+    (if (and session-id connection-uuid)
+      (do
+        (println
+          (str &quot;Disconnecting web socket associated with &quot;
+               (pr-str user-id) &quot;/&quot; (pr-str session-id)
+               &quot; with connection uuid &quot;
+               connection-uuid))
+        (if (ws/connected? web-socket)
+          (ws/close web-socket)
+          (println &quot;Unable to close web socket. It's not connected.&quot;)))
+      (println &quot;No session id available. Declined to issue close().&quot;))))
+</code></pre>
+<h5 id="web-socket-keep-alive-client">Web Socket Keep-Alive (Client)</h5>
+<p>A browser will close a WebSocket if no traffic is seen in some particular interval of time (typically 5 minutes). However, status updates often occur in <em>bursts</em> with long periods of inactivity between these bursts. When the <code>log-holder-element-ui</code> component is mounted we start a loop (using <code>js/setInterval</code>) which calls <code>send-ping</code>, a function that places (at two minute intervals) a <strong>ping</strong> message on the channel connected to the WebSocket.</p>
+<p>This let&rsquo;s the server know that it shouldn&rsquo;t close the connection.</p>
+<pre><code class="language-clojure">(defn send-ping[log-atom]
+  (let
+    [{web-socket :web-socket
+      user-id :user-id
+      session-id :session-id
+      ext-token :ext-token
+      connection-uuid :connection-uuid} @log-atom]
+    (if session-id
+      (do
+        (println
+          (str &quot;Sending Ping for &quot;
+               (pr-str user-id) &quot;/&quot;
+               (pr-str session-id)
+               &quot; at &quot; (pr-str connection-uuid)))
+        (if (ws/connected? web-socket)
+          (go
+            (&gt;! (:sink web-socket)
+                {:asys/ping user-id
+                 :asys/session-id session-id
+                 :asys/connection-uuid connection-uuid}))
+          (do
+            (println
+              (str &quot;PING: No websocket connected. &quot;
+                   &quot;Attempting reconnect for &quot;
+                   (pr-str user-id) &quot;/&quot;
+                   (pr-str session-id) &quot;, &quot;
+                   &quot;at &quot; (pr-str connection-uuid)))
+            (connect-ws-for-log
+              user-id
+              session-id
+              connection-uuid
+              ext-token log-atom))))
+      (println &quot;No session id available. No ping sent.&quot;))))
+</code></pre>
+<p>When the server receives a <strong>ping</strong> it should respond with a <strong>pong</strong>. If a web socket isn&rsquo;t connected, and the client expects it to be, the <code>send-ping</code> will attempt to reopen the connection. This may occur when connectivity is lost and the <code>decide-and-restart</code> function has declined to reconnect. A consequence of this approach is that if the server goes away for any reason, the client will attempt to reconnect forever.</p>
+<h3 id="the-server-side">The Server Side</h3>
+<p>Now we turn our attention to how web socket connections are handled by the server.</p>
+<h4 id="design-decisions">Design Decisions</h4>
+<p>In order to decouple the underlying transport mechanism (e.g. WebSocket or SSE) from the Server&rsquo;s higher-level message creation and dispatch functions we first create a single <code>core.async</code> channel to which we can write our messages destined for the client.</p>
+<p>We also create a publication of this channel using a selector of <code>:topic</code> on the received message map. A helpful side-effect of this approach is that a publication of a <strong>topic</strong> without a matching subscription is simply dropped. The <strong>topic</strong> we&rsquo;ll use for our log messages is <code>:log-msg</code>. Therefore, a message pushed to our channel with the form <code>{... :topic :log-msg ...}</code> will be forwarded to our publication.</p>
+<p>Finally, we create a subscription to the <strong>topic</strong> <code>:log-msg</code>, and a servicing function to remove messages from it and forward them to the client using whatever transport mechanism is desired. This decoupling serves two purposes: it allows us to change or update our messaging transport without unnecessarily impacting the server&rsquo;s code; and adding other topics is a relatively simple extension.</p>
+<p>We also need an atom to store the Server&rsquo;s active subscription&rsquo;s channel.</p>
+<h4 id="creating-the-channel--publication">Creating the Channel &amp; Publication</h4>
+<p>Below is the code that creates the single message channel, its associated publication and the atom
+used to store the subscription&rsquo;s channel.</p>
+<p>The atom will be initialized correctly at application startup time.</p>
+<pre><code class="language-clojure">(defonce
+  server-messages-channel-destined-for-all-clients
+  (atom nil))
+
+(defonce
+  server-messages-channel
+  (chan 100))
+
+(defonce
+  server-messages-publication
+  (pub server-messages-channel #(:topic %)))
+</code></pre>
+<h4 id="starting-pedestal-with-websocket-support">Starting Pedestal with WebSocket Support</h4>
+<p>In order for Pedestal/Jetty to start with WebSocket support you must, within its service map&rsquo;s <code>::http/container-options</code> entry, supply a value for the <code>:context-configurator</code> key.</p>
+<p>The value should be a reference to a function that configures the Jetty Servlet&rsquo;s web-socket behavior for Pedestal. The function should at least call the <code>add-ws-endpoints</code> function in the <code>io.pedestal.http.jetty.websockets</code> namespace. In our application this function is <code>server.messaging.websocket/websocket-configurator-for-jetty</code> shown below.</p>
+<pre><code class="language-clojure">(defn websocket-configurator-for-jetty
+  [jetty-servlet-context]
+  (ws/add-ws-endpoints
+    jetty-servlet-context
+    ws-paths))
+</code></pre>
+<p>The <code>add-ws-endpoints</code> function takes as parameters a ServletContext and a configuration map. The configuration map passed indicates the websocket uri(s) that Jetty should use as web sockets end-points, and also the functions that should be called when the web socket service receives the <code>on-connect</code>, <code>on-text</code>, <code>on-error</code> and <code>on-close</code> events.</p>
+<p>The configuation map used by the applications is shown below</p>
+<pre><code class="language-clojure">{&quot;/ws&quot;
+   {:on-connect
+    (ws/start-ws-connection
+      new-ws-client)
+    :on-text
+    (fn [raw-msg]
+      (process-incoming-text-message raw-msg))
+    :on-binary
+    (fn [payload offset length]
+      (process-incoming-binary-message
+        payload offset length))
+    :on-error
+    (fn [error]
+      (process-error error))
+    :on-close
+    (fn [num-code reason-text]
+      (process-close
+        num-code reason-text))}}
+</code></pre>
+<p>The <code>on-connect</code> handler uses Pedestal&rsquo;s web-socket functionality to start the connection. Pedestal&rsquo;s <code>start-ws-connection</code> function takes as its single argument a function that should accept two parameters passed to it by Pedestal: a websocket (of type <code>org.eclipse.jetty.websocket.api.Session</code>) and an async channel connected to the web socket.</p>
+<pre><code class="language-clojure">(defn new-ws-client
+  [^Session ws-session send-ch]
+
+  (log/info
+    (str &quot;new-ws-client: creating new websocket to client with &quot;
+         &quot;uri: &quot; (str (.getRequestURI ^Session ws-session))))
+  (let
+    [ws-endpoint
+     (get-ws-endpoint-from-session ws-session)
+     query-string-map
+     (some-&gt; ws-session
+             (.getRequestURI)
+             (.getQuery)
+             (route/parse-query-string))
+     [session-id ext-token connection-uuid]
+     (as-&gt;
+       query-string-map v
+       (mapv #(get v %) [:session-id :ext-token :connection-uuid]))]
+    (if (and session-id connection-uuid)
+      (let
+        [user-id-from-token
+         (or
+           (auth-utils/get-id-from-ext-token ext-token)
+           :anonymous)
+         message-text (str &quot;new-ws-client: starting web socket &quot;
+                           &quot;with user &quot; (pr-str user-id-from-token) &quot; &quot;
+                           &quot;for session-id &quot; session-id &quot; &quot;
+                           &quot;with connection-uuid &quot; (pr-str connection-uuid) &quot; &quot;
+                           &quot;from &quot; (pr-str ws-endpoint))
+         message (value-&gt;transit-string
+                   {:time (gen-utils/get-local-timestamp-with-offset)
+                    :text message-text})]
+
+        (log/info message-text)
+
+        (async/put!
+          send-ch
+          message)
+
+        (swap! ws-clients
+               assoc
+               (keyword
+                 (name (gen-utils/possible-string-as-keyword user-id-from-token))
+                 (str connection-uuid))
+               [ws-session send-ch
+                (keyword
+                  (name (gen-utils/possible-string-as-keyword user-id-from-token))
+                  (name (gen-utils/possible-string-as-keyword session-id)))]))
+      (log/warn (str &quot;No session-id and connection-uuid &quot;
+                     &quot;supplied for websocket creation.&quot;
+                     &quot;Websocket not created.&quot;)))))
+</code></pre>
+<p>Because web sockets exist in the Jetty session layer rather than the Pedestal routing layer we cannot rely on the authentication and authorization interceptors I discussed in a previous 
+<a href="https://heykieran.github.io/post/pedestal-buddy/" target="_blank" rel="noopener">post</a> to provide security for connection attempts at the server&rsquo;s <code>/ws</code> url. Therefore, before a client is allowed to establish a connection with a particular session-id (which encode the user&rsquo;s id) the jwt token, passed as a query parameter in the connection url, is examined to determine the user&rsquo;s id.</p>
+<p>We can extract the client’s requested session-id from the url used by the client to request a web-socket connection.</p>
+<p>As described earlier, the form of the url is <code>wss://&lt;hostname&gt;:&lt;port&gt;/ws?session-id=&lt;session-id&gt;&amp;connection-uuid=&lt;connection-uuid&gt;&amp;ext-token=&lt;ext-token&gt;</code>.</p>
+<p>The ws-clients atom is a record of the currently connected web-socket clients. It contains a map keyed by each client’s session-id with values that is a vector of the client’s Session instance and its connected channel.</p>
+<p>If the user has a valid user id the connection is allowed.</p>
+<p>In <code>new-ws-client</code> we extract the session-id requested by the client, sends a short <em>you&rsquo;re connected</em> message, and add a vector describing the connection to the <code>ws-clients</code> atom using a key composed of the user&rsquo;s id and the connection-uuid.</p>
+<p>You&rsquo;ll notice in the <code>on-text</code> handler function how the server&rsquo;s side of the web socket&rsquo;s <em>keep-alive</em> functionality is implemented in <code>process-incoming-text-message</code>.</p>
+<pre><code class="language-clojure">(defn process-incoming-text-message
+  [raw-msg]
+  (let
+    [message (transit-string-&gt;value raw-msg)]
+    (log/info &quot;Websocket message received &quot;
+              (pr-str message))
+    (if
+      (and
+        (map? message)
+        (contains? message :asys/ping))
+      (let
+        [{user-id :asys/ping
+          session-id :asys/session-id
+          connection-uuid :asys/connection-uuid} message]
+        (send-messages-to-clients
+          {:msg
+           {:asys/pong user-id
+            :asys/session-id session-id
+            :asys/connection-uuid connection-uuid}
+           :target-client
+           (keyword
+             (name user-id)
+             (str connection-uuid))}))
+      (log/warn
+        (str &quot;Unexpected websocket message received: &quot;
+             (pr-str message) &quot;, type: &quot;
+             (type message))))))
+</code></pre>
+<p>If the server receives a message with an <code>:asys/ping</code> key, the server automatically responds with an <code>:asys/pong</code> message. The value of the <code>:asys/ping</code> entry is the user id, session identifier and connection uuid of the client that sent the ping message and enables the server to direct its response correctly.</p>
+<h4 id="starting-the-message-processing">Starting the Message Processing</h4>
+<p>When the application starts the web-server, the <code>message-transport</code> function is also called to initialize the application&rsquo;s messaging functionality. This function takes two parameters, a <code>transport-type</code> (which can be either <code>:web-socket</code> or <code>:sse</code>) and the atom used to store the subscription&rsquo;s channel.</p>
+<pre><code class="language-clojure">(defn message-transport
+  [transport-type message-channel-atom]
+  (start-processing-sub transport-type message-channel-atom))
+</code></pre>
+<p>The <code>message-transport</code> function calls <code>start-processing-sub</code> which is the function that starts the go loop - accepting messages from the subscription channel and forwarding them to the client(s).</p>
+<pre><code class="language-clojure">(defn start-processing-sub
+  [transport-type message-channel-atom]
+  ;; If the channel already exists, then close it.
+  (when-let [ch (deref message-channel-atom)]
+    (async/close! ch))
+  ;; subscribe a channel to be contained in the
+  ;; server-messages-channel-destined-for-all-clients atom
+  ;; to the server-messages-publication with the topic of
+  ;; :log-msg i.e. anything in the publication with key of
+  ;; :topic and a value of :log-msg
+  (async/sub
+    rlog/server-messages-publication
+    :log-msg
+    (reset! message-channel-atom (async/chan)))
+  ;; start a go-loop that takes messages off the channel in the
+  ;; atom and pass it to the send-messages-to-clients function
+  (log/info &quot;Starting &quot; (pr-str transport-type) &quot; log message loop&quot;)
+  (async/go
+    (loop []
+      (when-let
+        [log-msg (async/&lt;! (deref message-channel-atom))]
+        (send-messages-to-clients transport-type log-msg)
+        (recur)))))
+</code></pre>
+<p>The <code>send-messages-to-clients</code> function is defined as a multi-method which selects on the <code>transport-type</code> value and makes sure that the correct <code>send-</code> function(s) are called for the selected transport type.</p>
+<p>Essentially, this gets reduced to calling the <code>send-messages-to-client</code> function in either the <code>server.messaging.websocket</code> or the <code>server.messaging.sse</code> namespaces.</p>
+<h4 id="sending-messages">Sending Messages</h4>
+<p>If we review the <code>send-message-</code> functions in the <code>server.messaging.websocket</code> namespace, we can see how they work. (The implementation for SSE is similar, and simpler).</p>
+<p>The <code>send-messages-to-clients</code> function is the namespace&rsquo;s main public function. It accepts as an argument a map representing the message to be sent. Within the map is an entry <code>:target-client</code> which indicates the message&rsquo;s destination. The function handles broadcast messages, i.e. messages destined for all connected clients, and also messages destined for only one client. In either case, this function will call the private function <code>send-message-to-client</code> in the same namespace as many times as is necessary.</p>
+<pre><code class="language-clojure">(defn send-messages-to-clients
+  [{message :msg
+    target-client :target-client
+    message-type :message-type
+    :as whole-message}]
+  (if (and (some? target-client)
+           (not= :none target-client))
+    (do
+      (log/info
+        (str &quot;websocket: asked to send message to clients &quot;
+             (pr-str target-client)
+             &quot;, msg: &quot;
+             (pr-str whole-message)))
+      (if (= :all target-client)
+        (doseq
+          [target-client (keys @ws-clients)]
+          (send-message-to-client
+            target-client
+            message
+            message-type))
+        (send-message-to-client
+          target-client
+          message
+          message-type)))))
+</code></pre>
+<p>The <code>send-message-to-client</code> is shown below. It take a <code>session-id</code> indicating the message&rsquo;s destination and a <code>message</code> which is a map.</p>
+<pre><code class="language-clojure">(defn- send-message-to-client
+  [connection-identifier message &amp; [message-type]]
+  (log/info
+    (str &quot;Asked to send web-socket message to individual client &quot;
+         (pr-str connection-identifier)
+         &quot;, msg is &quot;
+         (pr-str message)))
+  (if-let
+    [ws-connections (get-ws-conns-for-session-id
+                      @ws-clients
+                      connection-identifier)]
+    (doall
+      (map
+        (fn[connection-key]
+          (if-let
+            [[ws-session send-ch combined-session-id]
+             (get @ws-clients connection-key)]
+            (if (or
+                  (not (.isOpen ws-session))
+                  (ap/closed? send-ch))
+              (do
+                (log/warn
+                  &quot;While trying to send-message-to-client,&quot;
+                  &quot;found websocket or websocket channel was closed.&quot;
+                  &quot;combined-session-id&quot; (pr-str combined-session-id)
+                  &quot;connection-key &quot; (pr-str connection-key))
+                (clean-up-ws-clients))
+              (async/put!
+                send-ch
+                (value-&gt;transit-string
+                  {:time (gen-utils/get-local-timestamp-with-offset)
+                   :text message
+                   :message-type (or message-type :info)})
+                (fn[v]
+                  (log/debug
+                    (str
+                      &quot;put! in send-message-to-client &quot;
+                      (pr-str connection-key)
+                      &quot; returned &quot;
+                      (pr-str v))))))
+            (log/warn (str &quot;Couldn't find websocket session &quot;
+                           &quot;for client connection &quot;
+                           (pr-str connection-key)
+                           &quot;. Available connections &quot;
+                           &quot;are &quot; (pr-str (keys @ws-clients))))))
+        ws-connections))
+    (log/warn &quot;Couldn't find any web sockets for target-client&quot;
+              (:target-client message))))
+</code></pre>
+<h2 id="connecting-the-long-running-clojure-function">Connecting the long-running Clojure function</h2>
+<p>Now that the messaging infrastructure is in place we&rsquo;ll turn our attention to &ldquo;instrumenting&rdquo; our clojure function to send status update message.</p>
+<p>A convenient, but not the only, approach is to leverage Clojure&rsquo;s logging functionality. Often, within a Clojure we will often use calls to <code>log/info</code> and <code>log/debug</code> calls to mark and record important processing events. We could take the opportunity to selectively forward some of these messages to the remote client giving it feedback similar to what might be seen if the function was run in a REPL.</p>
+<p>This is the approach I&rsquo;ve chosen.</p>
+<p>First I create a macro that can wrap a call to functions in <code>log</code> namespace, but which can also accept a <code>session-id</code>.</p>
+<pre><code class="language-clojure">(defmacro with-forward-context
+  ([body]
+   (list `with-forward-context nil body))
+  ([target-id body]
+   (list `with-forward-context target-id body {}))
+  ([target-id body options]
+   (list 'do body
+         (list
+           `apply
+           `write-message-to-server-message-channel
+           (concat
+             (list
+               'list
+               (list 'clojure.string/join &quot; &quot;
+                     (conj
+                       (map
+                         #(if
+                            (instance? java.lang.Throwable %)
+                            &quot;ERROR&quot;
+                            (list
+                              'clojure.string/trim
+                              (list
+                                `str %)))
+                         (rest body))
+                       'list)))
+             (if target-id
+               (list target-id)
+               '())
+             (if options
+               (list options)
+               '()))))))
+</code></pre>
+<p>Then we can selectively wrap any <code>log</code> calls we like as follow:</p>
+<pre><code class="language-clojure">(rlog/with-forward-context
+      session-id
+      (log/info &quot;OK&quot;))
+</code></pre>
+<p>The result is that the message is logged in the usual fashion, but a call to <code>write-message-to-server-message-channel</code> is also made, ensuring that the content of the log message is also sent to the client matching <code>session-id</code>.</p>
+<h1 id="closure">Closure</h1>
+<p>Hopefully, if you&rsquo;re attempting to use websockets with your ClojureScript SPA this has been helpful in some small way. In a subsequent post I will discuss implementing a similar for of messaging but using SSE.</p>
+
+    </div>
+
+    
+
+
+
+
+
+  
+  
+
+<p class="edit-page">
+  <a href="https://github.com/heykieran/timpson-gray-blog/edit/master/content/post/using-sse-and-websockets/index.md">
+    <i class="fas fa-pen pr-2"></i>Edit this page
+  </a>
+</p>
+
+
+
+
+
+<div class="article-tags">
+  
+  <a class="badge badge-light" href="/tag/clojure/">clojure</a>
+  
+  <a class="badge badge-light" href="/tag/clojurescript/">clojurescript</a>
+  
+  <a class="badge badge-light" href="/tag/reframe/">reframe</a>
+  
+  <a class="badge badge-light" href="/tag/sse/">SSE</a>
+  
+  <a class="badge badge-light" href="/tag/websockets/">websockets</a>
+  
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    
+    
+
+
+
+
+
+  
+    
+    
+    
+      
+    
+    
+    
+    <div class="media author-card content-widget-hr">
+      
+        
+        <img class="avatar mr-3 avatar-circle" src="/author/kieran-owens/avatar_hu52a603635ecebd45650b162dadabb4e5_12861_270x270_fill_q90_lanczos_center.jpg" alt="Kieran Owens">
+      
+
+      <div class="media-body">
+        <h5 class="card-title"><a href="https://heykieran.github.io/">Kieran Owens</a></h5>
+        <h6 class="card-subtitle">CTO of Timpson Gray</h6>
+        <p class="card-text">Experienced Technology Leader with a particular interest in the use of functional languages for building accounting systems.</p>
+        <ul class="network-icon" aria-hidden="true">
+  
+    
+    
+    
+      
+    
+    
+    
+    
+    
+      
+    
+    <li>
+      <a href="https://twitter.com/heykieran" target="_blank" rel="noopener">
+        <i class="fab fa-twitter"></i>
+      </a>
+    </li>
+  
+    
+    
+    
+      
+    
+    
+    
+    
+    
+      
+    
+    <li>
+      <a href="https://github.com/heykieran" target="_blank" rel="noopener">
+        <i class="fab fa-github"></i>
+      </a>
+    </li>
+  
+</ul>
+
+      </div>
+    </div>
+  
+
+
+  
+
+
+
+
+
+<section id="comments">
+  
+    
+<div id="disqus_thread"></div>
+<script>
+  let disqus_config = function () {
+    
+    
+    
+  };
+  (function() {
+    if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+      document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+      return;
+    }
+    var d = document, s = d.createElement('script'); s.async = true;
+    s.src = 'https://' + "heykieran" + '.disqus.com/embed.js';
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+
+  
+</section>
+
+
+
+
+
+
+  
+  
+  <div class="article-widget content-widget-hr">
+    <h3>Related</h3>
+    <ul>
+      
+      <li><a href="/post/deploy-pedestal-react-to-docker/">Deploy a Clojure Pedestal API Server &amp; React/ClojureScript Web Application to Docker</a></li>
+      
+      <li><a href="/post/pedestal-and-google/">Pedestal API, ClojureScript SPA and Google Authentication</a></li>
+      
+      <li><a href="/post/pedestal-buddy/">Pedestal, Buddy and Security</a></li>
+      
+      <li><a href="/post/deploy-to-kubernetes-gke/">Deploy a Clojure Web Application to Kubernetes (GKE)</a></li>
+      
+      <li><a href="/post/clojure-configuration/">Clojure Configurations with Docker Secrets</a></li>
+      
+    </ul>
+  </div>
+  
+
+
+
+
+  </div>
+</article>
+
+      
+
+    
+    
+    
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/4.1.4/imagesloaded.pkgd.min.js" integrity="sha256-lqvxZrPLtfffUl2G/e7szqSvPBILGbwmsGE1MKlOi0Q=" crossorigin="anonymous"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.isotope/3.0.6/isotope.pkgd.min.js" integrity="sha256-CBrpuqrMhXwcLLUd5tvQ4euBHCdh7wGlDfNz8vbu/iI=" crossorigin="anonymous"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+
+      
+
+      
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js" integrity="sha256-eOgo0OtLL4cdq7RdwRUiGKLX9XsIJ7nGhWEKbohmVAQ=" crossorigin="anonymous"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/r.min.js"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/clojure.min.js"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/shell.min.js"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/bash.min.js"></script>
+        
+      
+
+    
+
+    
+    
+
+    
+    
+    <script>const code_highlighting = true;</script>
+    
+
+    
+    
+    <script>const isSiteThemeDark = false;</script>
+    
+
+    
+    
+    
+    
+    
+    
+    <script>
+      const search_config = {"indexURI":"/index.json","minLength":1,"threshold":0.3};
+      const i18n = {"no_results":"No results found","placeholder":"Search...","results":"results found"};
+      const content_type = {
+        'post': "Posts",
+        'project': "Projects",
+        'publication' : "Publications",
+        'talk' : "Talks",
+        'slides' : "Slides"
+        };
+    </script>
+    
+
+    
+    
+
+    
+    
+    <script id="search-hit-fuse-template" type="text/x-template">
+      <div class="search-hit" id="summary-{{key}}">
+      <div class="search-hit-content">
+        <div class="search-hit-name">
+          <a href="{{relpermalink}}">{{title}}</a>
+          <div class="article-metadata search-hit-type">{{type}}</div>
+          <p class="search-hit-description">{{snippet}}</p>
+        </div>
+      </div>
+      </div>
+    </script>
+    
+
+    
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/3.2.1/fuse.min.js" integrity="sha256-VzgmKYmhsGNNN4Ph1kMW+BjoYJM2jV5i4IlFoeZA9XI=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/jquery.mark.min.js" integrity="sha256-4HLtjeVgH0eIB3aZ9mLYF6E8oU5chNdjU6p6rrXpl9U=" crossorigin="anonymous"></script>
+    
+
+    
+    
+
+    
+    
+
+    
+    
+    <script id="dsq-count-scr" src="https://heykieran.disqus.com/count.js" async></script>
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+      
+    
+    
+    
+    
+    <script src="/js/academic.min.37431be2d92d7fb0160054761ab79602.js"></script>
+
+    
+
+
+
+
+
+
+  
+  
+  <div class="container">
+    <footer class="site-footer">
+  
+
+  <p class="powered-by">
+    © Kieran J. Owens 2020
+  </p>
+
+  
+  
+
+
+
+
+
+
+  <p class="powered-by">
+    Powered by the
+    <a href="https://sourcethemes.com/academic/" target="_blank" rel="noopener">Academic theme</a> for
+    <a href="https://gohugo.io" target="_blank" rel="noopener">Hugo</a>.
+
+    
+    <span class="float-right" aria-hidden="true">
+      <a href="#" class="back-to-top">
+        <span class="button_icon">
+          <i class="fas fa-chevron-up fa-2x"></i>
+        </span>
+      </a>
+    </span>
+    
+  </p>
+</footer>
+
+  </div>
+  
+
+  
+<div id="modal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Cite</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <pre><code class="tex hljs"></code></pre>
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-outline-primary my-1 js-copy-cite" href="#" target="_blank">
+          <i class="fas fa-copy"></i> Copy
+        </a>
+        <a class="btn btn-outline-primary my-1 js-download-cite" href="#" target="_blank">
+          <i class="fas fa-download"></i> Download
+        </a>
+        <div id="modal-error"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
