@@ -5,7 +5,7 @@
     <link>https://heykieran.github.io/post/</link>
       <atom:link href="https://heykieran.github.io/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Sun, 07 Jun 2020 15:00:00 -0400</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright>
     <image>
       <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png</url>
       <title>Posts</title>
@@ -610,6 +610,379 @@ used to store the subscription&amp;rsquo;s channel.&lt;/p&gt;
 &lt;p&gt;The result is that the message is logged in the usual fashion, but a call to &lt;code&gt;write-message-to-server-message-channel&lt;/code&gt; is also made, ensuring that the content of the log message is also sent to the client matching &lt;code&gt;session-id&lt;/code&gt;.&lt;/p&gt;
 &lt;h1 id=&#34;closure&#34;&gt;Closure&lt;/h1&gt;
 &lt;p&gt;Hopefully, if you&amp;rsquo;re attempting to use websockets with your ClojureScript SPA this has been helpful in some small way. In a subsequent post I will discuss implementing a similar for of messaging but using SSE.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Add a Custom Authentication Backend to a Clojure Pedestal Application using Buddy</title>
+      <link>https://heykieran.github.io/post/adding-a-custom-auth-backend/</link>
+      <pubDate>Sat, 06 Jun 2020 05:49:44 -0400</pubDate>
+      <guid>https://heykieran.github.io/post/adding-a-custom-auth-backend/</guid>
+      <description>&lt;h1 id=&#34;introduction&#34;&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;In two earlier posts (available 
+&lt;a href=&#34;https://heykieran.github.io/post/pedestal-buddy/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;here&lt;/a&gt; and 
+&lt;a href=&#34;https://heykieran.github.io/post/pedestal-and-google/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;here&lt;/a&gt;) I showed how to use the &lt;code&gt;buddy-auth&lt;/code&gt; library to develop an SPA that uses &lt;em&gt;session-based&lt;/em&gt; (or session cookie) security. The SPA accompanying that post (and available on 
+&lt;a href=&#34;https://github.com/heykieran/clj-pedestal-spa/tree/v1.0&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Github&lt;/a&gt; tag &lt;strong&gt;v1.0&lt;/strong&gt;) was also capable of using Google credentials to authenticate the user.&lt;/p&gt;
+&lt;p&gt;In this post I will provide further details on how the Google web authentication works, and I will show how to add additional authentication mechanisms (&lt;strong&gt;jwt&lt;/strong&gt; and &lt;strong&gt;Google IAP&lt;/strong&gt;) by developing a custom backend for use with &lt;code&gt;buddy-auth&lt;/code&gt;.&lt;/p&gt;
+&lt;h2 id=&#34;client-side-google-sign-in&#34;&gt;Client-Side Google Sign-In&lt;/h2&gt;
+&lt;div class=&#34;alert alert-note&#34;&gt;
+  &lt;div&gt;
+    Credit where credit is due: The client-side code is based on excellent work done by Tristan Straub which is available on &lt;a href=&#34;https://github.com/tristanstraub/cljs-google-signin&#34;&gt;Github&lt;/a&gt;.
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;GAPI&lt;/strong&gt; is a library provided by Google that enables browser-hosted javascript code to call Google API&amp;rsquo;s. It is available at 
+&lt;a href=&#34;https://apis.google.com/js/platform.js&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://apis.google.com/js/platform.js&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Amongst other functionality, it also includes the code we&amp;rsquo;ll need to interact with the endpoints used by Google Sign-In, which is used to generate the OAuth 2.0 credentials for the user.&lt;/p&gt;
+&lt;p&gt;On the client-side we&amp;rsquo;ll first need to ensure that the &lt;strong&gt;GAPI&lt;/strong&gt; library is loaded. This is done using the &lt;code&gt;&amp;lt;ensure-gapi!&lt;/code&gt; function.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;&amp;lt;ensure-gapi!&lt;/code&gt; function first checks if the &lt;strong&gt;GAPI&lt;/strong&gt; library has already been loaded. If not, it will call the function &lt;code&gt;&amp;lt;load-script&lt;/code&gt; to do so.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn- &amp;lt;ensure-gapi!
+  [client-id]
+  (go
+    (when-not (exists? js/gapi)
+      (&amp;lt;!
+        (&amp;lt;load-script
+          config/google-script-location)))
+    (&amp;lt;! (&amp;lt;init-gapi! client-id))))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;&amp;lt;load-script&lt;/code&gt; is an interesting function. It first creates an HTML &lt;code&gt;&amp;lt;script&amp;gt;&lt;/code&gt; element in memory, and sets its source attribute to &lt;code&gt;https://apis.google.com/js/platform.js&lt;/code&gt;. It then create a promise (as a channel using &lt;code&gt;&amp;lt;cb&lt;/code&gt;) to load the javascript file, adds the &lt;code&gt;&amp;lt;SCRIPT&amp;gt;&lt;/code&gt; element to the DOM, and returns the channel/promise.&lt;/p&gt;
+&lt;p&gt;After loading the &lt;strong&gt;GAPI&lt;/strong&gt; libraries, the &lt;code&gt;&amp;lt;ensure-gapi!&lt;/code&gt; function calls &lt;code&gt;&amp;lt;init-gapi!&lt;/code&gt; to initialize the &lt;code&gt;auth2&lt;/code&gt; components of the library, and to create the &lt;code&gt;GoogleAuth&lt;/code&gt; object. These are the components that we&amp;rsquo;ll use to get an OAuth 2.0 credentials claim from Google on behalf of a user.&lt;/p&gt;
+&lt;p&gt;On the SPA&amp;rsquo;s &lt;strong&gt;Users&lt;/strong&gt; page, we can display a styled Google Sign-In button by calling the &lt;code&gt;gapi.signin2.render&lt;/code&gt; function. This function takes a DOM element, within which it will render the sign-in button, and a map of parameters.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(js/gapi.signin2.render
+        el
+        #js {&amp;quot;scope&amp;quot;     &amp;quot;profile email&amp;quot;
+             &amp;quot;width&amp;quot;     144
+             &amp;quot;height&amp;quot;    30
+             &amp;quot;longtitle&amp;quot; false
+             &amp;quot;theme&amp;quot;     &amp;quot;dark&amp;quot;
+             &amp;quot;onsuccess&amp;quot; on-success
+             &amp;quot;onfailure&amp;quot; on-failure})
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;scope&lt;/code&gt; parameter in the options map sets the user identity elements we&amp;rsquo;d like returned by Google, and &lt;code&gt;on-success&lt;/code&gt; and &lt;code&gt;on-failure&lt;/code&gt; are Clojurescript functions called according to whether the authentication attempt succeeded or failed.&lt;/p&gt;
+&lt;p&gt;When the user clicks on the Sign-In button, a second browser window will open to a secure Google URL where the user can enter his or her credentials. If the authentication is successful the &lt;code&gt;on-success&lt;/code&gt; function is called with an instance of &lt;code&gt;GoogleUser&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Then, by calling &lt;code&gt;GoogleUser.getAuthResponse&lt;/code&gt; we can retrieve the &lt;code&gt;AuthResponse&lt;/code&gt; map; and from that we can get the &lt;code&gt;id_token&lt;/code&gt;, which is the ID token granted by Google.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(fn [google-user]
+            (println &amp;quot;running google-login-button on-success function&amp;quot;)
+            (let
+              [token (some-&amp;gt;
+                       google-user
+                       (ocall &amp;quot;getAuthResponse&amp;quot;)
+                       (oget &amp;quot;id_token&amp;quot;))]
+              (when token
+                (&amp;lt;post-to-server
+                  token))))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Given our requested scopes, the &lt;code&gt;AuthResponse&lt;/code&gt; will also contain the user&amp;rsquo;s Google email address. However, this isn&amp;rsquo;t to be trusted. The correct (and secure) way to confirm the email address is to validate the ID token using server-side code, before extracting the email address.&lt;/p&gt;
+&lt;p&gt;In order to do this the success function submits the token to the server for validation using an Ajax POST request.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn- &amp;lt;post-to-server
+  [token]
+  (let
+    [form-data
+     (str &amp;quot;idtoken=&amp;quot; token &amp;quot;&amp;amp;connection-uuid=&amp;quot; (random-uuid))]
+    (POST
+      config/google-callback-url
+      {:body form-data
+       :response-format :raw
+       :with-credentials true
+       :handler (fn[r]
+                  (js/console.log &amp;quot;Server Response from Google Login&amp;quot;)
+                  (js/console.log r)
+                  (js/console.log &amp;quot;will confirm with server&amp;quot;)
+                  (rf/dispatch
+                    [:auth/get-logged-in-user]))
+       :error-handler (fn[e]
+                        (js/console.log &amp;quot;Server Error&amp;quot;)
+                        (js/console.log e))})))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In our application the address stored in &lt;code&gt;config/google-callback-url&lt;/code&gt; is &lt;code&gt;https://&amp;lt;server-name&amp;gt;/auth/google&lt;/code&gt; which is a Pedestal route configured, at the end of its interceptor chain, to call the &lt;code&gt;alloc-auth-google-login&lt;/code&gt; handler function.&lt;/p&gt;
+&lt;p&gt;Within this function a call is made to &lt;code&gt;verify-google-token-response&lt;/code&gt;, passing the POST request&amp;rsquo;s &lt;code&gt;idtoken&lt;/code&gt; value. The verify function uses the &lt;code&gt;com.google.api.client.googleapis.auth.oauth2&lt;/code&gt; java library to validate the token and extract the email address.&lt;/p&gt;
+&lt;p&gt;The server will then create an &lt;code&gt;identity-token&lt;/code&gt; as explained 
+&lt;a href=&#34;https://heykieran.github.io/post/pedestal-buddy/#the-login-process&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;here&lt;/a&gt;, and add it to the Ring session&amp;rsquo;s &lt;code&gt;:identity&lt;/code&gt; field.&lt;/p&gt;
+&lt;p&gt;From this point, the client/server behaviors are as they would be for other session-based authentication types.&lt;/p&gt;
+&lt;h2 id=&#34;google-iap&#34;&gt;Google IAP&lt;/h2&gt;
+&lt;p&gt;Google IAP (Identity Aware Proxy) is a context-aware reverse proxy service available within the Google Cloud product line. It sits between the internet and your application&amp;rsquo;s resources and ensures that access to those resources is granted only to users who have the appropriate Cloud IAM role(s).&lt;/p&gt;
+&lt;p&gt;When a new user attempts to access a resource protected by IAP, IAP will direct the user to a Google OAuth 2.0 sign-in flow where the user can enter his or her credentials. If those credentials are correct, IAP will then assess whether the user is authorized to access the resource by checking the user&amp;rsquo;s roles and permissions. If everything checks out, the request is forwarded to the resource with the user&amp;rsquo;s JWT claim token added to the request&amp;rsquo;s headers in the &lt;strong&gt;x-goog-iap-jwt-assertion&lt;/strong&gt; field.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;It is the responsibility of the application to verify the validity of this token using Google&amp;rsquo;s public keys.&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;From the user&amp;rsquo;s perspective, the sign-in flow is similar to the flow used by the client-side sign-in described above, but with the result of a sucessful authentication being the addition of the &lt;strong&gt;x-goog-iap-jwt-assertion&lt;/strong&gt; header and the token to the request&amp;rsquo;s headers rather than calling the &lt;code&gt;on-success&lt;/code&gt; function in the browser.&lt;/p&gt;
+&lt;p&gt;IAP uses one of a number of different keys to sign the header. The public component of these keys is published (in JWK format) at 
+&lt;a href=&#34;https://www.gstatic.com/iap/verify/public_key-jwk&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;&lt;code&gt;https://www.gstatic.com/iap/verify/public_key-jwk&lt;/code&gt;&lt;/a&gt;. As far as I can tell, there is no way to determine which of the available keys Google will use to sign the JWT claim, although the signed token will include in its &lt;code&gt;:kid&lt;/code&gt; field the &lt;strong&gt;id&lt;/strong&gt; of the key used to sign it.&lt;/p&gt;
+&lt;h2 id=&#34;the-challenge&#34;&gt;The Challenge&lt;/h2&gt;
+&lt;p&gt;Session backends work just fine and, if handled well, provide perfectly adequate security. In my earlier post I showed how it is possible to integrate Google web login with our Reframe SPA, and although the authentication was performed by Google the end result is that the validated Google identity was inserted into the client&amp;rsquo;s session.&lt;/p&gt;
+&lt;p&gt;However, there are circumstances in which session authentication &amp;amp; authorization will not work - for example when a browser session doesn&amp;rsquo;t exist. This may occur when making calls to HTTP API endoints from clients other than a browser e.g. server calls, calls from desktop clients, or calls mediated by service orchestration engines.&lt;/p&gt;
+&lt;p&gt;In such cases, the use of authorization bearer tokens, such as JWT, is a better approach. The &lt;code&gt;buddy-auth&lt;/code&gt; library comes with a number of included backends, with one of which that can use JWT tokens. However, its implementation assumes that the JWT token will be included in the &lt;strong&gt;Authorization&lt;/strong&gt; header of the request. If our application is using IAP this won&amp;rsquo;t be the case. Therefore we&amp;rsquo;ll need to provide our own backend.&lt;/p&gt;
+&lt;h2 id=&#34;buddy-backends&#34;&gt;Buddy Backends&lt;/h2&gt;
+&lt;p&gt;A Buddy backend is simply an instance of an object that implements two protocols: &lt;code&gt;IAuthentication&lt;/code&gt; and &lt;code&gt;IAuthorization&lt;/code&gt;. Our custom backend (&lt;code&gt;jws-embedded&lt;/code&gt;) which implements these protocols can be found in the &lt;code&gt;server.auth.header&lt;/code&gt; namespace and mimics closely the &lt;code&gt;jws&lt;/code&gt; backend provided by Buddy.&lt;/p&gt;
+&lt;h3 id=&#34;iauthentication&#34;&gt;IAuthentication&lt;/h3&gt;
+&lt;p&gt;The &lt;code&gt;IAuthentication&lt;/code&gt; protocol defines two member functions: &lt;code&gt;-parse&lt;/code&gt; and &lt;code&gt;-authenticate&lt;/code&gt;. The former is responsible only for inspecting the request and parsing from it the material to be passed to &lt;code&gt;-authenticate&lt;/code&gt;. The standard implemenation of the Buddy middleware, initiated in the interceptor returned by our &lt;code&gt;alloc-auth-authentication-interceptor&lt;/code&gt; function (taking a backend as a parameter) ensures that if the call to &lt;code&gt;-parse&lt;/code&gt; in the backend returns nil, then the backend&amp;rsquo;s &lt;code&gt;-authenticate&lt;/code&gt; function won&amp;rsquo;t be called.&lt;/p&gt;
+&lt;h3 id=&#34;iauthorization&#34;&gt;IAuthorization&lt;/h3&gt;
+&lt;p&gt;The &lt;code&gt;IAuthorization&lt;/code&gt; protocol requires only a single function, &lt;code&gt;-handle-unauthorized&lt;/code&gt; which will be called with parameters of the request and some metadata when an authenticated request is not authorized to access a resource.&lt;/p&gt;
+&lt;p&gt;Remember the &lt;code&gt;alloc-auth-authentication-interceptor&lt;/code&gt; function, which takes a backend as a parameter, creates an interceptor whose &lt;code&gt;:enter&lt;/code&gt; method adds to the received context a key &lt;code&gt;:auth/backend&lt;/code&gt; and attaches the backend parameter as its value. The &lt;code&gt;:enter&lt;/code&gt; function updates the &lt;code&gt;:request&lt;/code&gt; map using the &lt;code&gt;buddy.auth.middleware/authentication-request&lt;/code&gt; function with the backend parameter. This hooks up Buddy middleware (tying the &lt;code&gt;-parse&lt;/code&gt; and &lt;code&gt;-authenticate&lt;/code&gt; members together, ensuring that if &lt;code&gt;-parse&lt;/code&gt; return nil then &lt;code&gt;-authenticate&lt;/code&gt; isn&amp;rsquo;t called)&lt;/p&gt;
+&lt;h2 id=&#34;the-implementation&#34;&gt;The Implementation&lt;/h2&gt;
+&lt;p&gt;The custom backend is created by the &lt;code&gt;jws-embedded-backend&lt;/code&gt; function, shown below. As you can see, it implements the two required protocols.&lt;/p&gt;
+&lt;p&gt;The backend is implemented in such a way as to authenticate using either the &lt;em&gt;session&lt;/em&gt; &lt;strong&gt;or&lt;/strong&gt; the &lt;em&gt;header&lt;/em&gt; information. This is accomplished in the &lt;code&gt;-parse&lt;/code&gt; function which calls &lt;code&gt;parse-embedded-header&lt;/code&gt;. If a request session is detected and it contains an &lt;code&gt;:identity&lt;/code&gt; field then &lt;code&gt;parse-embedded-header&lt;/code&gt; simply returns a 2-vector of `[:session &lt;identity&gt;].&lt;/p&gt;
+&lt;p&gt;If not, and the request headers contain a field matching one of the names we&amp;rsquo;ve reserved for our JWT token the &lt;code&gt;parse-embedded-header&lt;/code&gt; returns a 2-vector of &lt;code&gt;[:token &amp;lt;embedded-token-value&amp;gt;]&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;By implementing the backend in this way, and in the abscence of embedded headers, the &lt;em&gt;session&lt;/em&gt;-based authentication logic will work as before when we used Buddy&amp;rsquo;s included session backend, and any authentication logic based on the request&amp;rsquo;s headers is skipped.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn jws-embedded-backend
+  [{:keys [authfn unauthorized-handler options token-names on-error]}]
+  {:pre [(ifn? authfn)]}
+  (reify
+    proto/IAuthentication
+    (-parse [_ request]
+      (parse-embedded-header request token-names))
+    (-authenticate [_ request [auth-type session-or-token]]
+      (try
+        ;; parse-embedded-header will return a 2-vector
+        ;; with either :session of :token in the first
+        ;; position indicating how the identity is/should be
+        ;; determined.
+        (case auth-type
+          :token
+          ;; if we&#39;ve a token, attempt to identify the user using it
+          (authfn request session-or-token)
+          :session
+          ;; if we&#39;ve a session with an identity, just accept it
+          session-or-token)
+        (catch clojure.lang.ExceptionInfo e
+          (let [data (ex-data e)]
+            (when (fn? on-error)
+              (on-error request data))
+            nil))))
+
+    proto/IAuthorization
+    (-handle-unauthorized [_ request metadata]
+      (if unauthorized-handler
+        (unauthorized-handler request metadata)
+        (#&#39;token/handle-unauthorized-default request)))))
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If the &lt;code&gt;-parse&lt;/code&gt; function returns a non-nil value then &lt;code&gt;-authenticate&lt;/code&gt; is called and the case statement will decide how to handle the actual authentication. As with the session backend if the 2-vector&amp;rsquo;s first element is &lt;code&gt;:session&lt;/code&gt; we use the second element of the vector as the identity. On the other hand, if the first element is &lt;code&gt;:token&lt;/code&gt; we call the &lt;code&gt;authfn&lt;/code&gt; to validate the token and extract the user&amp;rsquo;s identity.&lt;/p&gt;
+&lt;p&gt;The implementation of &lt;code&gt;-handle-unauthorized&lt;/code&gt; either calls the default unauthorized handler, or a handler function passed to the &lt;code&gt;jws-embedded-backend&lt;/code&gt; function using the &lt;code&gt;:unauthorized-handler&lt;/code&gt; key in the options map.&lt;/p&gt;
+&lt;p&gt;Also, &lt;code&gt;authfn&lt;/code&gt; is an option parameter passed to the &lt;code&gt;jws-embedded-backend&lt;/code&gt; function and is created when we def&amp;rsquo;d the backend&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(def alloc-auth-google-header-token-auth-backend
+  (jws-embedded
+    {:authfn      token-authfn
+     :token-names [&amp;quot;x-goog-iap-jwt-assertion&amp;quot; &amp;quot;x-debug-token&amp;quot;]
+     :on-error
+                  (fn [request ex-data]
+                    (log/error
+                      &amp;quot;Request to&amp;quot;
+                      (:uri request)
+                      &amp;quot;threw exception: &amp;quot;
+                      ex-data))
+     :unauthorized-handler
+                  (fn unauthorized-handler
+                    [request metadata]
+                    (let [{user         :user
+                           roles        :roles
+                           required     :required
+                           user-session :user-session}
+                          (get-in metadata [:details :request])
+                          user-response-session
+                          (keyword
+                            (if user (name user) &amp;quot;anonymous&amp;quot;)
+                            (if user-session (name user-session) &amp;quot;anonymous&amp;quot;))
+                          error-message
+                          (str &amp;quot;NOT AUTHORIZED (HEADER): In unauthenticated handler for &amp;quot;
+                               &amp;quot;uri: &amp;quot; (pr-str (:uri request)) &amp;quot;. &amp;quot;
+                               &amp;quot;user: &amp;quot; (pr-str user) &amp;quot;, &amp;quot;
+                               &amp;quot;roles: &amp;quot; (pr-str roles) &amp;quot;, &amp;quot;
+                               &amp;quot;required roles: &amp;quot; (pr-str required) &amp;quot;. &amp;quot;
+                               &amp;quot;session-id: &amp;quot; (pr-str user-response-session) &amp;quot;.&amp;quot;)]
+                      (if user-session
+                        (rlog/with-forward-context
+                          user-response-session
+                          (log/error
+                            error-message)
+                          {:message-type :error})
+                        (log/error
+                          error-message)))
+                    (cond
+                      ;; If request is authenticated, raise 403 instead
+                      ;; of 401 (because user is authenticated but permission
+                      ;; denied is raised).
+                      (auth/authenticated? request)
+                      (-&amp;gt; (ring-response/response
+                            {:reason
+                             (str &amp;quot;Header authenticated, but not authorized for access to &amp;quot;
+                                  (some-&amp;gt; metadata :details :request :path) &amp;quot;. &amp;quot;
+                                  &amp;quot;Metadata : &amp;quot; (pr-str metadata))})
+                          (assoc :status 403))
+                      ;; In other cases, respond with a 401.
+                      :else
+                      (let [current-url (:uri request)]
+                        (-&amp;gt;
+                          (ring-response/response
+                            {:reason &amp;quot;Unauthorized&amp;quot;})
+                          (assoc :status 401)
+                          (ring-response/header &amp;quot;WWW-Authenticate&amp;quot; &amp;quot;tg-auth, type=1&amp;quot;)))))}))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;:token-names&lt;/code&gt; entry is a vector (in priority order) of the request headers we will inspect to find the user&amp;rsquo;s JWT identity token. In the code above, if the request header &lt;strong&gt;x-goog-iap-jwt-assertion&lt;/strong&gt; is found then its value will be used, otherwise &lt;strong&gt;x-debug-token&lt;/strong&gt; will be used. If neither is found, nil is returned. The vector&amp;rsquo;s ordering means that a &lt;strong&gt;x-goog-iap-jwt-assertion&lt;/strong&gt; header injected by Google IAP will take precedence.&lt;/p&gt;
+&lt;p&gt;In either case the token extracted will be validated by the function passed in the option maps &lt;code&gt;:authfn&lt;/code&gt; field (i.e. &lt;code&gt;token-authfn&lt;/code&gt;).&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn token-authfn
+  [request token]
+  (log/info &amp;quot;Attempting to authorize using token with JWT header: &amp;quot;
+            (some-&amp;gt; token (jws/decode-header)))
+  (when token
+    (let
+      [validity-map
+       (if (= &amp;quot;local&amp;quot; (:kid (jws/decode-header token)))
+         {:aud &amp;quot;local&amp;quot;
+          :iss &amp;quot;local&amp;quot;}
+         {:aud server-config/google-jwt-audience
+          :iss &amp;quot;https://cloud.google.com/iap&amp;quot;})]
+      (try
+        (when-let
+          [user-id
+           (google/get-valid-user-id-from-header
+             token
+             validity-map
+             240)]
+          (log/info &amp;quot;Successfully retrieved user ID using token &amp;quot; user-id)
+          user-id)
+        (catch clojure.lang.ExceptionInfo e
+          (log/info
+            (str &amp;quot;Exception thrown while retrieving user from token. Message: &amp;quot;
+                 (.getMessage ^Throwable e) &amp;quot;, Data: &amp;quot; (pr-str (ex-data e))))
+          (throw e))))))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here, we use the &lt;code&gt;get-valid-user-id-from-header&lt;/code&gt; function to validate the token and extract from it the user&amp;rsquo;s id. We pass to it the token, a &lt;strong&gt;validity-map&lt;/strong&gt;, indicating what the &lt;code&gt;:iss&lt;/code&gt; and &lt;code&gt;:aud&lt;/code&gt; value are expected to be, and a &lt;strong&gt;jitter&lt;/strong&gt; value (as a number of minutes).&lt;/p&gt;
+&lt;p&gt;The &lt;strong&gt;validity-map&lt;/strong&gt; is a map, based on the &lt;code&gt;:kid&lt;/code&gt; value of the signed token, containing the acceptable values for the &lt;em&gt;issuer&lt;/em&gt; and the &lt;em&gt;audience&lt;/em&gt; fields of the token for a particular &lt;code&gt;:kid&lt;/code&gt;. The &lt;strong&gt;jitter&lt;/strong&gt; value is the number of minutes after the token&amp;rsquo;s actual expiration date (its &lt;code&gt;:exp&lt;/code&gt; field) that the token is still considered valid. Because, this is a demonstration project we have set the value to 4 hours (240 minutes).&lt;/p&gt;
+&lt;p&gt;If the JWT token is valid then &lt;code&gt;get-valid-user-id-from-header&lt;/code&gt; returns an &lt;strong&gt;identity-token&lt;/strong&gt; as explained 
+&lt;a href=&#34;http://heykieran.github.io/post/pedestal-buddy#the-login-process&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;here&lt;/a&gt;. The &lt;code&gt;:alloc-auth/token&lt;/code&gt; key will contain the user&amp;rsquo;s JWT token, whether &lt;code&gt;:local&lt;/code&gt; or &lt;code&gt;:google&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The use of a &lt;code&gt;:local&lt;/code&gt; token is convenient for debugging purposes when you&amp;rsquo;re running the code locally, and not behind an &lt;strong&gt;IAP&lt;/strong&gt;. A local token can be used by supplying it in the &lt;strong&gt;x-debug-token&lt;/strong&gt; request header, and it will be used if an &lt;strong&gt;IAP&lt;/strong&gt; header doesn&amp;rsquo;t exist. (You will recall that the &lt;strong&gt;x-goog-iap-jwt-assertion&lt;/strong&gt; header has precedence).&lt;/p&gt;
+&lt;p&gt;A local token can be created using the same underlying method for the &lt;code&gt;:ext-token&lt;/code&gt; field of the &lt;strong&gt;identity-token&lt;/strong&gt;. It is a JWT token created and signed by our Pedestal server.&lt;/p&gt;
+&lt;p&gt;For convenience, the server supplies a route to retrieve a &lt;code&gt;:local&lt;/code&gt; token and&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ curl --insecure -X POST https://&amp;lt;server&amp;gt;:&amp;lt;port&amp;gt;/debug/token/&amp;lt;email-address&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;will return a clojure map that contains a token associated with the email address you supplied in the URL. Subsequent requests can use the response&amp;rsquo;s &lt;code&gt;:token&lt;/code&gt; field as the value of the &lt;strong&gt;x-debug-token&lt;/strong&gt; request header.&lt;/p&gt;
+&lt;p&gt;Obviously, this route, which allows public access, should be disabled in a production server.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn get-valid-user-id-from-header
+  [google-header-assertion valid-map &amp;amp; [minutes-offset]]
+  (letfn
+    [(get-user-id-with-validation
+       [r-val v-map]
+       (log/info &amp;quot;Checking token values for validity:&amp;quot; r-val
+                 &amp;quot;against&amp;quot; v-map)
+       (when
+         (every?
+           (fn [kw]
+             (= (get r-val kw) (get v-map kw)))
+           (keys v-map))
+         (log/info &amp;quot;token is valid, email address is&amp;quot; (get r-val :email))
+         {:alloc-auth/user-id
+          (auth-utils/get-id-from-email-address
+            (get r-val :email))
+          :alloc-auth/token-type :google
+          :alloc-auth/token r-val
+          :alloc-auth/ext-token  (debug-sign/sign-using-debug-key
+                                   server-config/debug-local-jwt
+                                   {:email (get r-val :email)})}))]
+    (let
+      [decoded-header
+       (try
+         (jws/decode-header google-header-assertion)
+         (catch clojure.lang.ExceptionInfo e
+           (throw
+             (ex-info &amp;quot;Unable to decode assertion header as jws&amp;quot;
+                      (merge
+                        (ex-data e)
+                        {:ex-message (.getMessage ^Throwable e)
+                         :ex-cause   (.getCause ^Throwable e)})
+                      e)))
+         (catch Exception e
+           (throw
+             (ex-info &amp;quot;Unable to decode assertion header as jws&amp;quot;
+                      {:ex-message (.getMessage ^Throwable e)
+                       :ex-cause (.getCause ^Throwable e)}
+                      e))))]
+      (log/info &amp;quot;Successfully decoded header assertion using :kid&amp;quot; (:kid decoded-header))
+      (log/info &amp;quot;Cache agent contains&amp;quot;
+                (if-let
+                  [jwks (some-&amp;gt; (deref jwk-cache-agent) :jwk)]
+                  (str (count jwks) &amp;quot; entries with kid&#39;s &amp;quot; (mapv :kid jwks))
+                  &amp;quot;no entries.&amp;quot;))
+      (if-let
+        [public-key-jwt
+         (some
+           (fn [poss]
+             (when
+               (= (:kid poss)
+                  (:kid decoded-header))
+               poss))
+           (get (deref jwk-cache-agent) :jwk))]
+        (let
+          [alg (keyword (str/lower-case (:alg public-key-jwt)))]
+          (try
+            (-&amp;gt;
+              (jwt/unsign
+                google-header-assertion
+                (keys/jwk-&amp;gt;public-key public-key-jwt)
+                {:alg alg
+                 :now (time/minus (time/instant) (time/minutes (or minutes-offset 0)))})
+              (get-user-id-with-validation valid-map))
+            (catch Exception e
+              (log/error
+                &amp;quot;Google header validation problem, &amp;quot;
+                (pr-str (ex-data e))
+                &amp;quot;using public key&amp;quot;
+                (pr-str public-key-jwt)))))
+        (do
+          (log/error &amp;quot;No matching :kid entry found in cache.&amp;quot;)
+          (throw
+            (let [e (Exception.
+                      (str &amp;quot;No matching :kid (&amp;quot;
+                           (pr-str decoded-header)
+                           &amp;quot;) entry found in cache.&amp;quot;))]
+              (ex-info &amp;quot;Bad jws.&amp;quot;
+                     (merge
+                       (ex-data e)
+                       {:ex-message (.getMessage ^Throwable e)
+                        :ex-cause   (.getCause ^Throwable e)})
+                     e))))))))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&#34;testing-the-implementation&#34;&gt;Testing the Implementation&lt;/h1&gt;
+&lt;p&gt;Now that we have the backend working, we can test it using &lt;strong&gt;curl&lt;/strong&gt;.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ curl --insecure -X POST https://localhost:8081/api/getsecresource/a
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;will return the transit response&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[&amp;quot;^ &amp;quot;,&amp;quot;~:reason&amp;quot;,&amp;quot;Unauthorized&amp;quot;]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;indicating that the request couldn&amp;rsquo;t be authenticated using either a session of a header token. This is as we&amp;rsquo;d expect.&lt;/p&gt;
+&lt;p&gt;Now issue a request for a token by supplying an email address associated with the &lt;strong&gt;user-id&lt;/strong&gt; &lt;code&gt;:user&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ curl --insecure -X POST https://localhost:8081/debug/token/user@timpsongray.com
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;which will return something similar to&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;{:identity 
+  {:alloc-auth/user-id :user, 
+   :alloc-auth/token-type :local, 
+   :alloc-auth/token {:email &amp;quot;user@timpsongray.com&amp;quot;, :iss &amp;quot;local&amp;quot;, :aud &amp;quot;local&amp;quot;, :iat 1593088750, :exp 1593089650}, :alloc-auth/ext-token &amp;quot;eyJhbGciOiJFUzI1NiIsImtpZCI6ImxvY2FsIn0.eyJlbWFpbCI6InVzZXJAdGltcHNvbmdyYXkuY29tIiwiaXNzIjoibG9jYWwiLCJpYXQiOjE1OTMwODg3NTAsImF1ZCI6ImxvY2FsIiwiZXhwIjoxNTkzMDkyMzUwfQ.oqGnFqQ0N-7OYVBpLsiF_rNkDCtuHvI8i7OfXHaKvtJsTxxtoPHXN1kCd9d5X9Li3PM7q1Xg0z7TuRoZuGXB5A&amp;quot;, 
+   :alloc-auth/user-session :user-3}, 
+   :token &amp;quot;eyJhbGciOiJFUzI1NiIsImtpZCI6ImxvY2FsIn0.eyJlbWFpbCI6InVzZXJAdGltcHNvbmdyYXkuY29tIiwiaXNzIjoibG9jYWwiLCJpYXQiOjE1OTMwODg3NTAsImF1ZCI6ImxvY2FsIiwiZXhwIjoxNTkzMDkyMzUwfQ.tX6bAIqK7tPEpilwTtN-VWoNDgIJZXy7cxWgWmlKyfZi5Wt4R_emuBHPD6J6-WevwblA1V_f1pkWBKxH7QyFQg&amp;quot;}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The token is in the &lt;code&gt;:token&lt;/code&gt; field.&lt;/p&gt;
+&lt;p&gt;Using this token we can now issue a request for a resource to which &lt;code&gt;:user&lt;/code&gt; is permitted access, adding the token we recieved as the &lt;strong&gt;x-debug-token&lt;/strong&gt; request header,&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ curl --insecure -X POST \
+  -H &amp;quot;x-debug-token: eyJhbGciOiJFUzI1NiIsImtpZCI6ImxvY2FsIn0.eyJlbWFpbCI6InVzZXJAdGltcHNvbmdyYXkuY29tIiwiaXNzIjoibG9jYWwiLCJpYXQiOjE1OTMwODg3NTAsImF1ZCI6ImxvY2FsIiwiZXhwIjoxNTkzMDkyMzUwfQ.tX6bAIqK7tPEpilwTtN-VWoNDgIJZXy7cxWgWmlKyfZi5Wt4R_emuBHPD6J6-WevwblA1V_f1pkWBKxH7QyFQg&amp;quot; \
+  https://localhost:8081/api/getsecresource/u
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and we should see the following transit response,&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[&amp;quot;^ &amp;quot;,&amp;quot;~:the-results&amp;quot;,&amp;quot;Let&#39;s pretend that this is something interesting.&amp;quot;]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;letting us know that the request succeeded.&lt;/p&gt;
+&lt;p&gt;However, if we try to access a resource to which &lt;code&gt;:user&lt;/code&gt; does not have permission,&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ curl --insecure -X POST \
+-H &amp;quot;X-debug-token: eyJhbGciOiJFUzI1NiIsImtpZCI6ImxvY2FsIn0.eyJlbWFpbCI6InVzZXJAdGltcHNvbmdyYXkuY29tIiwiaXNzIjoibG9jYWwiLCJpYXQiOjE1OTMwODg3NTAsImF1ZCI6ImxvY2FsIiwiZXhwIjoxNTkzMDkyMzUwfQ.tX6bAIqK7tPEpilwTtN-VWoNDgIJZXy7cxWgWmlKyfZi5Wt4R_emuBHPD6J6-WevwblA1V_f1pkWBKxH7QyFQg&amp;quot; \
+https://localhost:8081/api/getsecresource/a
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;we&amp;rsquo;ll receive an error message letting us know that &lt;code&gt;:admin&lt;/code&gt; is the required role, while we only have the &lt;code&gt;:user&lt;/code&gt; role,&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[&amp;quot;^ &amp;quot;,&amp;quot;~:reason&amp;quot;,&amp;quot;Header authenticated, but not authorized for access to /api/getsecresource/a. 
+Metadata : {:details {:request {:path \&amp;quot;/api/getsecresource/a\&amp;quot;, :path-params {}, 
+:user :user, :roles #{:user}, 
+:identity #object[clojure.core$identity 0x8a41b2d \&amp;quot;clojure.core$identity@8a41b2d\&amp;quot;], 
+:required #{:admin}, :user-session nil}, 
+:message \&amp;quot;\\\&amp;quot;Alloc-Unauthorized\\\&amp;quot;\&amp;quot;}}&amp;quot;]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&#34;closure&#34;&gt;Closure&lt;/h1&gt;
+&lt;p&gt;We now have a authentication back-end that can handle both session- and header-based authentication. Our SPA works as it always did, but now we can also use the api from non-browser based clients, including requests received through, and tagged by the IAP proxy.&lt;/p&gt;
 </description>
     </item>
     
