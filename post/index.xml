@@ -5,12 +5,65 @@
     <link>https://heykieran.github.io/post/</link>
       <atom:link href="https://heykieran.github.io/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2021</copyright>
     <image>
-      <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png</url>
+      <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_3.png</url>
       <title>Posts</title>
       <link>https://heykieran.github.io/post/</link>
     </image>
+    
+    <item>
+      <title>Implement trustless security on GKE using IAP</title>
+      <link>https://heykieran.github.io/post/secure-app-with-iap/</link>
+      <pubDate>Sat, 20 Jun 2020 05:49:44 -0400</pubDate>
+      <guid>https://heykieran.github.io/post/secure-app-with-iap/</guid>
+      <description>&lt;h1 id=&#34;set-up-iap&#34;&gt;Set up IAP&lt;/h1&gt;
+&lt;p&gt;Add the correct URI to the list of  &amp;ldquo;Authorized Redirect URI&amp;rsquo;s&amp;rdquo; on the Credentials screen (the blah-blah is your project&amp;rsquo;s clientID)&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;`https://iap.googleapis.com/v1/oauth/clientIds/486988131533-luvn04a1l3cbit82ihgrq4ioobq33kt3.apps.googleusercontent.com:handleRedirect`
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Download JSON using the link at the top of the Client ID for Web Application, we&amp;rsquo;ll use the
+&lt;code&gt;client_id_key&lt;/code&gt; and the &lt;code&gt;client_secret_key&lt;/code&gt; values from it below.&lt;/p&gt;
+&lt;p&gt;Create a secret to be used by IAP&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;kubectl create secret generic allocations-iap-secret --from-literal=client_id=client_id_key \ --from-literal=client_secret=client_secret_key&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Add the IAP block to the backend config&lt;/p&gt;
+&lt;p&gt;File &lt;code&gt;be-config.yaml&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;apiVersion: cloud.google.com/v1beta1
+kind: BackendConfig
+metadata:
+  name: allocations-iap-config-default
+  # namespace: my-namespace
+spec:
+  iap:
+    enabled: true
+    oauthclientCredentials:
+      secretName: allocations-iap-secret
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and associate the service port with the bakend config&lt;/p&gt;
+&lt;p&gt;File &lt;code&gt;service.yaml&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;metadata:
+  annotations:
+    beta.cloud.google.com/backend-config: &#39;{&amp;quot;default&amp;quot;: &amp;quot;allocations-iap-config-default&amp;quot;}&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&#34;the-jwt-token&#34;&gt;The jwt token&lt;/h1&gt;
+&lt;p&gt;The &lt;code&gt;aud:&lt;/code&gt; value should be &lt;code&gt;/projects/PROJECT_NUMBER/global/backendServices/SERVICE_ID&lt;/code&gt;&lt;/p&gt;
+&lt;h1 id=&#34;get-the-project-number&#34;&gt;Get the Project Number&lt;/h1&gt;
+&lt;p&gt;The &lt;code&gt;PROJECT_NUMBER&lt;/code&gt; can be found using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud projects describe PROJECT_ID
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and look for the &lt;code&gt;projectNumber:&lt;/code&gt; field.&lt;/p&gt;
+&lt;h1 id=&#34;get-the-service-id&#34;&gt;Get the Service ID&lt;/h1&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud compute backend-services describe k8s-be-31272--6743adf4e25dfdd9 --project=allocations-acco
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;unting-v1 &amp;ndash;global&lt;/p&gt;
+&lt;p&gt;and look for the &lt;code&gt;id:&lt;/code&gt; field.&lt;/p&gt;
+&lt;h1 id=&#34;stop-a-cluster&#34;&gt;Stop a Cluster&lt;/h1&gt;
+&lt;pre&gt;&lt;code&gt;`gcloud container clusters resize cluster-timpson-gray --num-nodes=0`
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&#34;start-a-cluster&#34;&gt;Start a Cluster&lt;/h1&gt;
+&lt;pre&gt;&lt;code&gt;`gcloud container clusters resize cluster-timpson-gray --num-nodes=1`
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>Asynchronous communication streams between a Pedestal server and a ReFrame SPA</title>
@@ -1128,7 +1181,7 @@ Metadata : {:details {:request {:path \&amp;quot;/api/getsecresource/a\&amp;quot
 &lt;p&gt;Now, a consideration of the interceptor chain built by the &lt;code&gt;build-secured-route-vec-to&lt;/code&gt; function. This function taking as its first argument an interceptor (or handler function) will return a vector of interceptors appropriate for the dual functions of authenticating the &lt;strong&gt;user&lt;/strong&gt; and authorizing his/her access to the resource (uri). The function also accepts a number of other options, which we will return to later.&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;
-&lt;p&gt;The first interceptor in the security-related portion of the interceptor chain attempts to authenticate the user. It is provided a context map, and will update the &lt;code&gt;:request&lt;/code&gt; portion of the context map using the &lt;code&gt;buddy.auth.middleware/authentication-request&lt;/code&gt; function.
+&lt;p&gt;The first interceptor in the security-related portion of the interceptor chain attempts to authenticate the user. It is provided a context map, and will update the &lt;code&gt;:request&lt;/code&gt; portion of the context map using the &lt;code&gt;buddy.auth.middleware/authentication-request&lt;/code&gt; function. 
 This function takes as parameters the request, and the backend. It will populate the &lt;code&gt;:identity&lt;/code&gt; key of the request map if authentication suceeds (as determined by the backend). If the authentication fails the backend&amp;rsquo;s &lt;code&gt;:unauthorized-handler&lt;/code&gt; is called. This returns a 401 response to the client.&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
@@ -1138,7 +1191,7 @@ This function takes as parameters the request, and the backend. It will populate
 &lt;p&gt;Then the &lt;em&gt;&lt;strong&gt;error catching&lt;/strong&gt;&lt;/em&gt; interceptor (created by the function &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt;) is entered. It returns the received context map unchanged. It&amp;rsquo;s only responsibility is to handle exceptions that might be thrown later by the interceptors named &lt;code&gt;:alloc-auth-permission-checker&lt;/code&gt; and &lt;code&gt;:alloc-auth-access-rule-checker&lt;/code&gt;. These two interceptors in turn check the user&amp;rsquo;s access to a resource (uri) based on his/her assigned roles; and checks his/her access based on custom defined rules. (I provide a expanded description of both below.)&lt;/p&gt;
 &lt;div class=&#34;alert alert-note&#34;&gt;
 &lt;div&gt;
-  A benefit of using a single &lt;em&gt;error catching&lt;/em&gt; interceptor is that there is a consolidation of application responses in a single area of the code rather than having them spread throughout the code in other interceptors&amp;rsquo; &lt;code&gt;:error&lt;/code&gt; functions. The interceptor is created by the &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt; function which will select the appropriate &lt;em&gt;backend&lt;/em&gt; at the time an authentication or authorization error is encountered. Therefore, in addition to the consistency of responses mentioned above, this approach ensures that backends are fully &lt;em&gt;swappable&lt;/em&gt; and can be changed without impacting other areas of the code.
+  A benefit of using a single &lt;em&gt;error catching&lt;/em&gt; interceptor is that there is a consolidation of application responses in a single area of the code rather than having them spread throughout the code in other interceptors&#39; &lt;code&gt;:error&lt;/code&gt; functions. The interceptor is created by the &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt; function which will select the appropriate &lt;em&gt;backend&lt;/em&gt; at the time an authentication or authorization error is encountered. Therefore, in addition to the consistency of responses mentioned above, this approach ensures that backends are fully &lt;em&gt;swappable&lt;/em&gt; and can be changed without impacting other areas of the code.
 &lt;/div&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
@@ -1152,7 +1205,7 @@ This function takes as parameters the request, and the backend. It will populate
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;h2 id=&#34;access-rules&#34;&gt;Access Rules&lt;/h2&gt;
-&lt;p&gt;Access rules are helpful when an application developer want to allow access to a &lt;strong&gt;route&lt;/strong&gt; only under certain circumstances; circumstances that cannot be encoded in a &lt;strong&gt;route&lt;/strong&gt;&amp;lsquo;s uri pattern. As a trivial example, consider the situation where the developer wants to grant access to a uri pattern &lt;code&gt;/api/dostuff/:id&lt;/code&gt; between 9:00AM and 5:00PM only.&lt;/p&gt;
+&lt;p&gt;Access rules are helpful when an application developer want to allow access to a &lt;strong&gt;route&lt;/strong&gt; only under certain circumstances; circumstances that cannot be encoded in a &lt;strong&gt;route&lt;/strong&gt;&amp;rsquo;s uri pattern. As a trivial example, consider the situation where the developer wants to grant access to a uri pattern &lt;code&gt;/api/dostuff/:id&lt;/code&gt; between 9:00AM and 5:00PM only.&lt;/p&gt;
 &lt;p&gt;A way to achieve this is to use an &lt;strong&gt;access rule&lt;/strong&gt; defined according to the convention required by &lt;code&gt;buddy.auth.accessrules&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;Such a rule can be expressed as follows&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(def rule-1
@@ -1420,7 +1473,7 @@ This function takes as parameters the request, and the backend. It will populate
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;If the &lt;strong&gt;roles&lt;/strong&gt; associated with the user, and &lt;code&gt;assoc&lt;/code&gt;-ed into the context map earlier as &lt;code&gt;:alloc-auth/auth&lt;/code&gt; don&amp;rsquo;t intersect with the &lt;strong&gt;roles&lt;/strong&gt; required for access (stored in the &lt;code&gt;alloc-auth-permissions&lt;/code&gt; atom) an &lt;code&gt;ex-info&lt;/code&gt; exception is thrown. The exception will be handled by the &lt;strong&gt;error catcher&lt;/strong&gt; interceptor which will return the appropriate response to the client.&lt;/p&gt;
 &lt;h3 id=&#34;the-alloc-auth-access-rule-checker-interceptor&#34;&gt;The &lt;code&gt;:alloc-auth-access-rule-checker&lt;/code&gt; interceptor&lt;/h3&gt;
-&lt;p&gt;If the Pedestal interceptor chain which is built using &lt;code&gt;build-secured-route-vec-to&lt;/code&gt; was passed a &lt;code&gt;:rules&lt;/code&gt; parameter, this interceptor will run the rules&amp;rsquo; handler functions to decide whether access to the resource should be granted (returns &lt;code&gt;success&lt;/code&gt;) or denied (returns &lt;code&gt;error&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;If the Pedestal interceptor chain which is built using &lt;code&gt;build-secured-route-vec-to&lt;/code&gt; was passed a &lt;code&gt;:rules&lt;/code&gt; parameter, this interceptor will run the rules&#39; handler functions to decide whether access to the resource should be granted (returns &lt;code&gt;success&lt;/code&gt;) or denied (returns &lt;code&gt;error&lt;/code&gt;).&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn alloc-auth-rules-checker-interceptor-factory
   [rules]
   (interceptor/interceptor
@@ -1732,6 +1785,25 @@ allocations-app-v1-web-5d966f5d8-v2wgn   1/1     Running   0          32m
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h1 id=&#34;closure&#34;&gt;Closure&lt;/h1&gt;
 &lt;p&gt;Deploying a web application to Kubernetes and exposing it on the web with a specific URL isn&amp;rsquo;t particularly difficult, but there are a number of places where things can go pear-shaped. Hopefully, this will help when you try to do the same thing.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Integrating a full build process within a Clojure/Clojurescript Application</title>
+      <link>https://heykieran.github.io/post/integrated-build-to-docker/static/</link>
+      <pubDate>Sat, 09 May 2020 11:53:08 -0400</pubDate>
+      <guid>https://heykieran.github.io/post/integrated-build-to-docker/static/</guid>
+      <description>&lt;h1 id=&#34;introduction&#34;&gt;Introduction&lt;/h1&gt;
+&lt;h2 id=&#34;the-makefile&#34;&gt;The Makefile&lt;/h2&gt;
+&lt;p&gt;The repository also contains a Makefile that streamlines building the application and the docker image easier.&lt;/p&gt;
+&lt;p&gt;The following targets are defined:&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;clean-all&lt;/code&gt; - cleans out all compilation and build artifacts&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;clean-build&lt;/code&gt; - deletes the ClojureScript and JVM build artifacts. Does not remove any docker build artifacts.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;clean-deploy&lt;/code&gt; - deletes the docker build artifacts in &lt;code&gt;./docker/deploy&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;build&lt;/code&gt; - build the ClojureScript production &lt;code&gt;js&lt;/code&gt; file, and the JVM &lt;code&gt;.classes&lt;/code&gt; files&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;docker&lt;/code&gt; - builds the docker image&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;docker/deploy&lt;/code&gt; - assembles all the artifacts needed to build the docker image to the &lt;code&gt;docker/deploy&lt;/code&gt; directory, and cleans out any unnecessary files and directories&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;run-local&lt;/code&gt; - using the &lt;code&gt;java&lt;/code&gt; command runs the application from the application jar in the &lt;code&gt;docker/deploy&lt;/code&gt; directory.&lt;/p&gt;
 </description>
     </item>
     
@@ -2214,7 +2286,7 @@ service, it would be possible to have both &lt;code&gt;user@gmail.com&lt;/code&g
 &lt;p&gt;Fundamentally, authenticating and logging in merely associates a user
 with a web session. The session is the operative object and identities
 are not, and cannot be shared between sessions. A user may have multiple
-sessions open, but they don&amp;rsquo;t &amp;ldquo;&lt;em&gt;mingle&lt;/em&gt;&amp;quot;.&lt;/p&gt;
+sessions open, but they don&amp;rsquo;t &amp;ldquo;&lt;em&gt;mingle&lt;/em&gt;&amp;rdquo;.&lt;/p&gt;
 &lt;h3 id=&#34;ad-hoc-_affirmative_-login-method&#34;&gt;Ad-hoc &lt;em&gt;affirmative&lt;/em&gt; login method&lt;/h3&gt;
 &lt;p&gt;The application as presented allows a user to simply assert that they
 are a known user. The only reason this feature is included is to
@@ -2370,7 +2442,7 @@ and your figwheel/Jetty (for development mode only) servers.&lt;/p&gt;
 &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
-&lt;p&gt;In the &lt;code&gt;common-src/config/config.cljc&lt;/code&gt; you will need to set the following
+&lt;p&gt;In the &lt;code&gt;common-src/config/config.cljc&lt;/code&gt; you will need to set the following 
 variables&lt;/p&gt;
 &lt;table&gt;
 &lt;thead&gt;
@@ -2407,7 +2479,7 @@ variables&lt;/p&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
 &lt;p&gt;In the file &lt;code&gt;dev.cljs.edn&lt;/code&gt; change the &lt;code&gt;:open-url&lt;/code&gt; parameter to match your
-server&amp;rsquo;s name, and the ssl port used by figwheel. This should match
+server&amp;rsquo;s name, and the ssl port used by figwheel. This should match 
 &lt;code&gt;https://&amp;lt;my-hostname&amp;gt;:&amp;lt;pedestal-ssl-port&amp;gt;/r/home&lt;/code&gt;.&lt;/p&gt;
 &lt;h3 id=&#34;starting-the-servers&#34;&gt;Starting the Server(s)&lt;/h3&gt;
 &lt;h4 id=&#34;development-mode&#34;&gt;Development Mode&lt;/h4&gt;
@@ -2476,10 +2548,10 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-the-initial-view-of-the-home-page-no-logged-in-user&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The initial view of the home page (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The initial view of the home page (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1338&#34; height=&#34;352&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1338&#34; height=&#34;352&#34;&gt;
 &lt;/a&gt;
 
 
@@ -2515,10 +2587,10 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-the-main-menu-no-logged-in-user&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page-menu-no-logged-in-user_hufd402a6ba5fecc72c633474ae2fa3e3d_57047_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The main menu (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page-menu-no-logged-in-user_hufd402a6ba5fecc72c633474ae2fa3e3d_57047_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The main menu (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page-menu-no-logged-in-user_hufd402a6ba5fecc72c633474ae2fa3e3d_57047_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1338&#34; height=&#34;674&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page-menu-no-logged-in-user_hufd402a6ba5fecc72c633474ae2fa3e3d_57047_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1338&#34; height=&#34;674&#34;&gt;
 &lt;/a&gt;
 
 
@@ -2561,10 +2633,10 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-access-to-public-resource-is-allowed-no-logged-in-user&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/access-public-resource_huf6a3c9ebea043d4f5d4e6b23eba4a1b4_41499_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;Access to Public Resource is allowed (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/access-public-resource_huf6a3c9ebea043d4f5d4e6b23eba4a1b4_41499_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;Access to Public Resource is allowed (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/access-public-resource_huf6a3c9ebea043d4f5d4e6b23eba4a1b4_41499_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1340&#34; height=&#34;418&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/access-public-resource_huf6a3c9ebea043d4f5d4e6b23eba4a1b4_41499_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1340&#34; height=&#34;418&#34;&gt;
 &lt;/a&gt;
 
 
@@ -2579,7 +2651,8 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 
 &lt;p&gt;This is as expected as that resource is unsecured and available to anyone who can access the application.&lt;/p&gt;
 &lt;h3 id=&#34;sign-in-as-the-localuser-user&#34;&gt;Sign-In as the &lt;code&gt;:local/:user&lt;/code&gt; User&lt;/h3&gt;
-&lt;p&gt;On the Sign-In Page, click on the button labelled &lt;strong&gt;&lt;a href=&#34;mailto:user@timpsongray.com&#34;&gt;user@timpsongray.com&lt;/a&gt;&lt;/strong&gt;. This will associate you session with the application user &lt;code&gt;:user&lt;/code&gt;, who has been assigned the &lt;code&gt;:user&lt;/code&gt; &lt;strong&gt;role&lt;/strong&gt;. This form of sign-in is a &lt;code&gt;:local&lt;/code&gt; authority sign-in. The authority is granted by the application itself.&lt;/p&gt;
+&lt;p&gt;On the Sign-In Page, click on the button labelled &lt;strong&gt;
+&lt;a href=&#34;mailto:user@timpsongray.com&#34;&gt;user@timpsongray.com&lt;/a&gt;&lt;/strong&gt;. This will associate you session with the application user &lt;code&gt;:user&lt;/code&gt;, who has been assigned the &lt;code&gt;:user&lt;/code&gt; &lt;strong&gt;role&lt;/strong&gt;. This form of sign-in is a &lt;code&gt;:local&lt;/code&gt; authority sign-in. The authority is granted by the application itself.&lt;/p&gt;
 
 
 
@@ -2601,10 +2674,10 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-the-standard-sign-in-page-no-logged-in-user&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The Standard Sign-In Page (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The Standard Sign-In Page (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1336&#34; height=&#34;868&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1336&#34; height=&#34;868&#34;&gt;
 &lt;/a&gt;
 
 
@@ -2639,10 +2712,10 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-after-the-user-user-has-signed-in&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-user-signed-in_hu88471979aee3312eae8537ac4b138fbe_46032_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;After the user &amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt; has signed in.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-user-signed-in_hu88471979aee3312eae8537ac4b138fbe_46032_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;After the user &amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt; has signed in.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-user-signed-in_hu88471979aee3312eae8537ac4b138fbe_46032_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1340&#34; height=&#34;372&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-user-signed-in_hu88471979aee3312eae8537ac4b138fbe_46032_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1340&#34; height=&#34;372&#34;&gt;
 &lt;/a&gt;
 
 
@@ -2679,10 +2752,10 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-the-user-user-is-allowed-to-access-to-the-user-resource&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-user-page-ok_hua77f555305a4e482c429b34566c4f1b6_45163_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The user (&amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt;) is allowed to access to the &amp;lt;strong&amp;gt;User&amp;lt;/strong&amp;gt; resource.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-user-page-ok_hua77f555305a4e482c429b34566c4f1b6_45163_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The user (&amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt;) is allowed to access to the &amp;lt;strong&amp;gt;User&amp;lt;/strong&amp;gt; resource.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-user-page-ok_hua77f555305a4e482c429b34566c4f1b6_45163_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1344&#34; height=&#34;426&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-user-page-ok_hua77f555305a4e482c429b34566c4f1b6_45163_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1344&#34; height=&#34;426&#34;&gt;
 &lt;/a&gt;
 
 
@@ -2719,10 +2792,10 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-the-user-user-is-denied-access-to-the-admin-resource&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-admin-page-denied_hu8fda4bc3b88839b1d49961b5d15e137b_125581_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The user (&amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt;) is denied access to the &amp;lt;strong&amp;gt;Admin&amp;lt;/strong&amp;gt; resource.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-admin-page-denied_hu8fda4bc3b88839b1d49961b5d15e137b_125581_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The user (&amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt;) is denied access to the &amp;lt;strong&amp;gt;Admin&amp;lt;/strong&amp;gt; resource.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-admin-page-denied_hu8fda4bc3b88839b1d49961b5d15e137b_125581_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1334&#34; height=&#34;592&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-admin-page-denied_hu8fda4bc3b88839b1d49961b5d15e137b_125581_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1334&#34; height=&#34;592&#34;&gt;
 &lt;/a&gt;
 
 
@@ -2758,10 +2831,10 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-a-view-of-the-standard-sign-out-page-with-user-user-is-logged-in&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/local-user-sign-out_hu5288488acb08e3af3122c648af377573_121592_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;A view of the standard Sign-Out page with user (&amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt;) is logged in.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/local-user-sign-out_hu5288488acb08e3af3122c648af377573_121592_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;A view of the standard Sign-Out page with user (&amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt;) is logged in.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/local-user-sign-out_hu5288488acb08e3af3122c648af377573_121592_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1334&#34; height=&#34;1170&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/local-user-sign-out_hu5288488acb08e3af3122c648af377573_121592_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1334&#34; height=&#34;1170&#34;&gt;
 &lt;/a&gt;
 
 
@@ -2796,10 +2869,10 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-returned-to-home-page-after-user-signs-out&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;Returned to Home Page after user signs out.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;Returned to Home Page after user signs out.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1338&#34; height=&#34;352&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1338&#34; height=&#34;352&#34;&gt;
 &lt;/a&gt;
 
 
@@ -2835,10 +2908,10 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-the-standard-sign-in-page&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The Standard Sign-In Page.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The Standard Sign-In Page.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1336&#34; height=&#34;868&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1336&#34; height=&#34;868&#34;&gt;
 &lt;/a&gt;
 
 
@@ -2873,10 +2946,10 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-the-google-sign-in-dialog&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-login-dialog_hu00c65657a65268155e33b18fe1910fb9_72909_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The Google Sign-In Dialog.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-login-dialog_hu00c65657a65268155e33b18fe1910fb9_72909_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The Google Sign-In Dialog.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-login-dialog_hu00c65657a65268155e33b18fe1910fb9_72909_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1178&#34; height=&#34;712&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-login-dialog_hu00c65657a65268155e33b18fe1910fb9_72909_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1178&#34; height=&#34;712&#34;&gt;
 &lt;/a&gt;
 
 
@@ -2911,10 +2984,10 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-the-home-page-with-google-signed-in-user&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-login-home_hu0f008ac669061a5310176bfbdabf1530_48835_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The Home Page with Google signed-in user.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-login-home_hu0f008ac669061a5310176bfbdabf1530_48835_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The Home Page with Google signed-in user.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-login-home_hu0f008ac669061a5310176bfbdabf1530_48835_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1478&#34; height=&#34;352&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-login-home_hu0f008ac669061a5310176bfbdabf1530_48835_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1478&#34; height=&#34;352&#34;&gt;
 &lt;/a&gt;
 
 
@@ -2927,7 +3000,8 @@ an access denied message.&lt;/p&gt;
 
 &lt;/figure&gt;
 
-&lt;p&gt;Because &lt;strong&gt;&lt;a href=&#34;mailto:heykieran@gmail.com&#34;&gt;heykieran@gmail.com&lt;/a&gt;&lt;/strong&gt; is an alias for the user &lt;code&gt;:admin&lt;/code&gt;, that is the ID displayed in the top-right corner of the page, and consequently access to the API endpoints restricted to users in the &lt;code&gt;:admin&lt;/code&gt; role will be allowed.&lt;/p&gt;
+&lt;p&gt;Because &lt;strong&gt;
+&lt;a href=&#34;mailto:heykieran@gmail.com&#34;&gt;heykieran@gmail.com&lt;/a&gt;&lt;/strong&gt; is an alias for the user &lt;code&gt;:admin&lt;/code&gt;, that is the ID displayed in the top-right corner of the page, and consequently access to the API endpoints restricted to users in the &lt;code&gt;:admin&lt;/code&gt; role will be allowed.&lt;/p&gt;
 &lt;h3 id=&#34;signing-out&#34;&gt;Signing Out&lt;/h3&gt;
 &lt;p&gt;If you click on the &lt;strong&gt;Users&lt;/strong&gt; menu item you can return to the Sign-In/Sign-Out page to disconnect your session from the Google account using the &lt;strong&gt;Sign Out&lt;/strong&gt; button. This disconnects your application session, but does &lt;strong&gt;not&lt;/strong&gt; log you out from Google.&lt;/p&gt;
 
@@ -2951,10 +3025,10 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-the-users-page-with-a-signed-in-google-user-mapped-to-application-id-admin&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-sign-out-page_hua45813ca70e13bb9a469ee5545a5e2d9_106661_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The Users page with a Signed-In Google user (mapped to application ID &amp;lt;code&amp;gt;:admin&amp;lt;/code&amp;gt;).&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-sign-out-page_hua45813ca70e13bb9a469ee5545a5e2d9_106661_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The Users page with a Signed-In Google user (mapped to application ID &amp;lt;code&amp;gt;:admin&amp;lt;/code&amp;gt;).&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-sign-out-page_hua45813ca70e13bb9a469ee5545a5e2d9_106661_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1340&#34; height=&#34;908&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-sign-out-page_hua45813ca70e13bb9a469ee5545a5e2d9_106661_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1340&#34; height=&#34;908&#34;&gt;
 &lt;/a&gt;
 
 
@@ -2981,30 +3055,30 @@ an access denied message.&lt;/p&gt;
     A repository with some working code and implementation notes can be found &lt;a href=&#34;https://github.com/heykieran/cadence-test&#34;&gt;here&lt;/a&gt;.
   &lt;/div&gt;
 &lt;/div&gt;
-&lt;p&gt;I had the occasion recently to investigate, and cursorily evaluate, a number of workflow
+&lt;p&gt;I had the occasion recently to investigate, and cursorily evaluate, a number of workflow 
 orchestration systems for use on a project with which I was involved. One of those systems,
 
 &lt;a href=&#34;https://cadenceworkflow.io/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;&lt;strong&gt;Cadence&lt;/strong&gt;&lt;/a&gt;, particularly appealed to me - there was something very &lt;em&gt;Clojuresque&lt;/em&gt; about it;
 certainly something very suggestive of a functional language.&lt;/p&gt;
 &lt;p&gt;It has the concept of state &lt;em&gt;durability&lt;/em&gt; (in workflow functions) that bears more than a passing
-resemblance to the persistent data structures of Clojure - but extended across time. This
-concept, similar to checkpoints, opens avenues to consistent, predictable restarts after
-failures. If one can restore the complete state of a system to a known &lt;em&gt;good-state&lt;/em&gt; then one can
-continue as if the failure had never occurred. Of course, if system-wide (or even better,
+resemblance to the persistent data structures of Clojure - but extended across time. This 
+concept, similar to checkpoints, opens avenues to consistent, predictable restarts after 
+failures. If one can restore the complete state of a system to a known &lt;em&gt;good-state&lt;/em&gt; then one can 
+continue as if the failure had never occurred. Of course, if system-wide (or even better, 
 distributed) non-volatile RAM ever becomes a reality then Cadence would not be needed. This
 strikes me as essence of the problem Cadence is attempting to solve, or, at least, the gap it&amp;rsquo;s
-attempting to bridge. Cadence also allows, through activities, the use of non-persistent
+attempting to bridge. Cadence also allows, through activities, the use of non-persistent 
 data structures which can be considered as being analogous to the concept of a &lt;em&gt;side-effect&lt;/em&gt; in Clojure.&lt;/p&gt;
-&lt;p&gt;The separation of the &lt;em&gt;functional&lt;/em&gt; from the &lt;em&gt;side-effect&lt;/em&gt;-ing, and the elision of
+&lt;p&gt;The separation of the &lt;em&gt;functional&lt;/em&gt; from the &lt;em&gt;side-effect&lt;/em&gt;-ing, and the elision of 
 infrastructure and communication failure concerns leaves developers with simpler, almost always
-more tractable, domain logic concerns and significantly reduces the cognitive load.
+more tractable, domain logic concerns and significantly reduces the cognitive load. 
 This is similar to the benefits often realized through the adoption of functional languages.&lt;/p&gt;
 &lt;h2 id=&#34;a-brief-tour-to-cadence&#34;&gt;A Brief Tour to Cadence&lt;/h2&gt;
 &lt;p&gt;
 &lt;a href=&#34;https://cadenceworkflow.io/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Cadence&lt;/a&gt; is a workflow automation system developed by Uber. It shares many features
 with other workflow automation systems but differs by being uniquely
-&lt;em&gt;fault-oblivious&lt;/em&gt; rather than merely &lt;em&gt;fault-tolerant&lt;/em&gt;. The approach adopted by Cadence simplifies
-greatly the work of developers who are relieved of many of the burdens of coordinating
+&lt;em&gt;fault-oblivious&lt;/em&gt; rather than merely &lt;em&gt;fault-tolerant&lt;/em&gt;. The approach adopted by Cadence simplifies 
+greatly the work of developers who are relieved of many of the burdens of coordinating 
 activities and recovering from system or service failure.&lt;/p&gt;
 &lt;p&gt;Cadence is complex but three concepts core to its understanding are&lt;/p&gt;
 &lt;ul&gt;
@@ -3012,34 +3086,34 @@ activities and recovering from system or service failure.&lt;/p&gt;
 &lt;li&gt;Workflow Workers and&lt;/li&gt;
 &lt;li&gt;Activity Workers&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;The Cadence service, backed by a persistent data-store such as Cassandra or MySql, is responsible for
-orchestrating the activities of both type of workers, for maintaining history, and in the case of failure,
+&lt;p&gt;The Cadence service, backed by a persistent data-store such as Cassandra or MySql, is responsible for 
+orchestrating the activities of both type of workers, for maintaining history, and in the case of failure, 
 for recovering the state of all workflows (but not activities).&lt;/p&gt;
-&lt;p&gt;Conceptually, the Cadence service instructs a Workflow Worker to execute a Workflow function. The Workflow function,
-which implements business logic, is guaranteed by Cadence to be &lt;em&gt;durable&lt;/em&gt;. That is, its state, including its
-thread stack and thread-local variables, are known and stored by Cadence, and in the case of failure
+&lt;p&gt;Conceptually, the Cadence service instructs a Workflow Worker to execute a Workflow function. The Workflow function, 
+which implements business logic, is guaranteed by Cadence to be &lt;em&gt;durable&lt;/em&gt;. That is, its state, including its 
+thread stack and thread-local variables, are known and stored by Cadence, and in the case of failure 
 they are restored.&lt;/p&gt;
-&lt;p&gt;Workflows, like the business processes they typically model, may be long-running. It&amp;rsquo;s not unusual for a
-real-world business process to take days or even months to complete, and Cadence provides excellent facilities
-to support such long-running processes within workflow functions. Therefore, the durability of the workflow functions (with the guaranteed
-recovery of their states across failures) enables a simple &lt;em&gt;straight-line&lt;/em&gt; view of the business logic. This
+&lt;p&gt;Workflows, like the business processes they typically model, may be long-running. It&amp;rsquo;s not unusual for a 
+real-world business process to take days or even months to complete, and Cadence provides excellent facilities 
+to support such long-running processes within workflow functions. Therefore, the durability of the workflow functions (with the guaranteed 
+recovery of their states across failures) enables a simple &lt;em&gt;straight-line&lt;/em&gt; view of the business logic. This 
 greatly reduces the complexity of the development process by reducing the burden on the developer to anticipate
 and mitigate &lt;strong&gt;all&lt;/strong&gt; failure modes.&lt;/p&gt;
 &lt;p&gt;In order to be able to guarantee durability across failures Cadence places a number of
-restrictions on the code in Workflow functions. The code must be &lt;em&gt;deterministic&lt;/em&gt; i.e. executing the code
+restrictions on the code in Workflow functions. The code must be &lt;em&gt;deterministic&lt;/em&gt; i.e. executing the code 
 must produce the same result no matter how often it is run. Therefore, certain actions are forbidden within
-workflow code - examples being: interacting &lt;strong&gt;directly&lt;/strong&gt; with external services, getting the time, getting random values,
+workflow code - examples being: interacting &lt;strong&gt;directly&lt;/strong&gt; with external services, getting the time, getting random values, 
 and creating or suspending threads.&lt;/p&gt;
 &lt;p&gt;These type of actions are fundamentally non-deterministic and would make full recovery of the workflow state impossible.
-However, the Cadence API provides alternatives for &lt;strong&gt;some&lt;/strong&gt; of these that produce deterministic behavior; and
+However, the Cadence API provides alternatives for &lt;strong&gt;some&lt;/strong&gt; of these that produce deterministic behavior; and 
 which assure the recoverability of the function&amp;rsquo;s local variables, threads and state.&lt;/p&gt;
-&lt;p&gt;For situations requiring interaction with external services (&lt;em&gt;the outside world&lt;/em&gt;), Cadence insists
-that all communication be conducted through Activities, using Activity Workers. Activities do not share with Workflows
-any of Cadence&amp;rsquo;s requirement that they be deterministic. Essentially anything is allowed in activities and any
+&lt;p&gt;For situations requiring interaction with external services (&lt;em&gt;the outside world&lt;/em&gt;), Cadence insists 
+that all communication be conducted through Activities, using Activity Workers. Activities do not share with Workflows 
+any of Cadence&amp;rsquo;s requirement that they be deterministic. Essentially anything is allowed in activities and any 
 clean-up after failure becomes the responsibility of the developer rather than the Cadence service.&lt;/p&gt;
-&lt;p&gt;Conceptually, &lt;em&gt;(but not precisely)&lt;/em&gt;, a Workflow Worker will start an Activity Worker (or multiple Activity Workers) to interact with the
+&lt;p&gt;Conceptually, &lt;em&gt;(but not precisely)&lt;/em&gt;, a Workflow Worker will start an Activity Worker (or multiple Activity Workers) to interact with the 
 outside world. Examples of an Activity might be interacting with a web-service, getting or saving a record to
-a database, or awaiting human input, such as a decision. Cadence offers no guarantees about activity state,
+a database, or awaiting human input, such as a decision. Cadence offers no guarantees about activity state, 
 and that state is not recovered in the case of failures of the Cadence infrastructure i.e. within the Cadence service itself.&lt;/p&gt;
 &lt;p&gt;In order to control a running workflow, or to affect its state, it can be signalled using events delivered by Cadence.&lt;/p&gt;
 &lt;h2 id=&#34;cadence--clojure-challenges&#34;&gt;Cadence &amp;amp; Clojure Challenges&lt;/h2&gt;
@@ -3057,11 +3131,11 @@ leaving a cleaner, more Clojure-esque result.&lt;/p&gt;
 but you could use &lt;code&gt;:volatile-mutable&lt;/code&gt; to allow the fields to be settable. Unfortunately, the bigger problem
 is that the generated class is &lt;code&gt;public final&lt;/code&gt; which effectively eliminates the possibility that we
 could use the class as a base class in &lt;code&gt;gen-class&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;This might have been helpful as we could define a zero-args constructor in &lt;code&gt;gen-class&lt;/code&gt; and then using the &lt;code&gt;:constructors&lt;/code&gt;
-field map that constructor to the base class constructor and then assign default values to the field in the &lt;code&gt;:init&lt;/code&gt; method.
+&lt;p&gt;This might have been helpful as we could define a zero-args constructor in &lt;code&gt;gen-class&lt;/code&gt; and then using the &lt;code&gt;:constructors&lt;/code&gt; 
+field map that constructor to the base class constructor and then assign default values to the field in the &lt;code&gt;:init&lt;/code&gt; method. 
 The fact that the &lt;code&gt;deftype&lt;/code&gt;-ed class is &lt;code&gt;final&lt;/code&gt; eliminates that approach.&lt;/p&gt;
 &lt;h2 id=&#34;working-cadence--clojure-code&#34;&gt;Working Cadence &amp;amp; Clojure Code&lt;/h2&gt;
-&lt;p&gt;In order to fully investigate using Clojure with Cadence I developed a small set of demos to demonstrate how it works,
+&lt;p&gt;In order to fully investigate using Clojure with Cadence I developed a small set of demos to demonstrate how it works, 
 works around what doesn&amp;rsquo;t, and exercises the result. &lt;strong&gt;Very&lt;/strong&gt; little consideration was given to making the code more idiomatic,
 at least from a Clojure perspective, or even particularly effective. I only making the 
 &lt;a href=&#34;https://github.com/heykieran/cadence-test&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;repository&lt;/a&gt;
@@ -3079,8 +3153,8 @@ your suggestions for improvement.&lt;/p&gt;
       <pubDate>Fri, 17 Apr 2020 13:39:37 -0400</pubDate>
       <guid>https://heykieran.github.io/post/pedestal-jetty-https/</guid>
       <description>&lt;p&gt;&lt;strong&gt;Introduction&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Setting up Pedestal (using Jetty) with HTTPS isn&amp;rsquo;t that difficult, but
-it is a bit &amp;ldquo;fiddly&amp;rdquo;. Essentially, you&amp;rsquo;ll need a keystore so that Jetty has
+&lt;p&gt;Setting up Pedestal (using Jetty) with HTTPS isn&amp;rsquo;t that difficult, but 
+it is a bit &amp;ldquo;fiddly&amp;rdquo;. Essentially, you&amp;rsquo;ll need a keystore so that Jetty has 
 access to encryption keys and can encrypt pages sent over HTTPS.&lt;/p&gt;
 &lt;p&gt;&lt;em&gt;This post only deals with self-signed certificates, but if you want to use
 commercially-signed certificates it should work too.&lt;/em&gt;&lt;/p&gt;
@@ -3091,8 +3165,8 @@ using other formats.
   &lt;/div&gt;
 &lt;/div&gt;
 &lt;p&gt;&lt;strong&gt;Service Map (Pedestal)&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;In order to run Jetty under Pedestal you&amp;rsquo;ll need to supply a service map. The following service map works for me. You can change it as you need. The important elements in the
-current context are where Jetty should look for the keystore (&lt;code&gt;keystore-location&lt;/code&gt;),
+&lt;p&gt;In order to run Jetty under Pedestal you&amp;rsquo;ll need to supply a service map. The following service map works for me. You can change it as you need. The important elements in the 
+current context are where Jetty should look for the keystore (&lt;code&gt;keystore-location&lt;/code&gt;), 
 the &lt;code&gt;:ssl?&lt;/code&gt; key, the &lt;code&gt;:ssl-port&lt;/code&gt; and the &lt;code&gt;:security-provider&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;&lt;em&gt;Make sure the provider (Conscrypt) is in your &lt;code&gt;deps.edn&lt;/code&gt; file&lt;/em&gt;&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;
@@ -3122,9 +3196,9 @@ the &lt;code&gt;:ssl?&lt;/code&gt; key, the &lt;code&gt;:ssl-port&lt;/code&gt; a
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;strong&gt;Jetty Keystore&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;In order for Pedestal to start with Jetty,
-it expects to find a keystore in a particular location
+it expects to find a keystore in a particular location 
 (see &lt;em&gt;Service Map&lt;/em&gt; notes above).&lt;/p&gt;
-&lt;p&gt;To create the keystore (I&amp;rsquo;ve plagiarized/assembled from the following
+&lt;p&gt;To create the keystore (I&amp;rsquo;ve plagiarized/assembled from the following 
 pieces of information web, and I&amp;rsquo;m afraid I can&amp;rsquo;t remember the source(s).)&lt;/p&gt;
 &lt;p&gt;Generate a private site key (&lt;code&gt;site.key&lt;/code&gt;)&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;$ openssl genrsa -des3 -out site.key 2048

@@ -5,9 +5,9 @@
     <link>https://heykieran.github.io/tag/https/</link>
       <atom:link href="https://heykieran.github.io/tag/https/index.xml" rel="self" type="application/rss+xml" />
     <description>https</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Fri, 17 Apr 2020 13:39:37 -0400</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2021</copyright><lastBuildDate>Fri, 17 Apr 2020 13:39:37 -0400</lastBuildDate>
     <image>
-      <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png</url>
+      <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_3.png</url>
       <title>https</title>
       <link>https://heykieran.github.io/tag/https/</link>
     </image>
@@ -18,8 +18,8 @@
       <pubDate>Fri, 17 Apr 2020 13:39:37 -0400</pubDate>
       <guid>https://heykieran.github.io/post/pedestal-jetty-https/</guid>
       <description>&lt;p&gt;&lt;strong&gt;Introduction&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Setting up Pedestal (using Jetty) with HTTPS isn&amp;rsquo;t that difficult, but
-it is a bit &amp;ldquo;fiddly&amp;rdquo;. Essentially, you&amp;rsquo;ll need a keystore so that Jetty has
+&lt;p&gt;Setting up Pedestal (using Jetty) with HTTPS isn&amp;rsquo;t that difficult, but 
+it is a bit &amp;ldquo;fiddly&amp;rdquo;. Essentially, you&amp;rsquo;ll need a keystore so that Jetty has 
 access to encryption keys and can encrypt pages sent over HTTPS.&lt;/p&gt;
 &lt;p&gt;&lt;em&gt;This post only deals with self-signed certificates, but if you want to use
 commercially-signed certificates it should work too.&lt;/em&gt;&lt;/p&gt;
@@ -30,8 +30,8 @@ using other formats.
   &lt;/div&gt;
 &lt;/div&gt;
 &lt;p&gt;&lt;strong&gt;Service Map (Pedestal)&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;In order to run Jetty under Pedestal you&amp;rsquo;ll need to supply a service map. The following service map works for me. You can change it as you need. The important elements in the
-current context are where Jetty should look for the keystore (&lt;code&gt;keystore-location&lt;/code&gt;),
+&lt;p&gt;In order to run Jetty under Pedestal you&amp;rsquo;ll need to supply a service map. The following service map works for me. You can change it as you need. The important elements in the 
+current context are where Jetty should look for the keystore (&lt;code&gt;keystore-location&lt;/code&gt;), 
 the &lt;code&gt;:ssl?&lt;/code&gt; key, the &lt;code&gt;:ssl-port&lt;/code&gt; and the &lt;code&gt;:security-provider&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;&lt;em&gt;Make sure the provider (Conscrypt) is in your &lt;code&gt;deps.edn&lt;/code&gt; file&lt;/em&gt;&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;
@@ -61,9 +61,9 @@ the &lt;code&gt;:ssl?&lt;/code&gt; key, the &lt;code&gt;:ssl-port&lt;/code&gt; a
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;strong&gt;Jetty Keystore&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;In order for Pedestal to start with Jetty,
-it expects to find a keystore in a particular location
+it expects to find a keystore in a particular location 
 (see &lt;em&gt;Service Map&lt;/em&gt; notes above).&lt;/p&gt;
-&lt;p&gt;To create the keystore (I&amp;rsquo;ve plagiarized/assembled from the following
+&lt;p&gt;To create the keystore (I&amp;rsquo;ve plagiarized/assembled from the following 
 pieces of information web, and I&amp;rsquo;m afraid I can&amp;rsquo;t remember the source(s).)&lt;/p&gt;
 &lt;p&gt;Generate a private site key (&lt;code&gt;site.key&lt;/code&gt;)&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;$ openssl genrsa -des3 -out site.key 2048

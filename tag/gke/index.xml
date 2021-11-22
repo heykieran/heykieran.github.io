@@ -5,12 +5,65 @@
     <link>https://heykieran.github.io/tag/gke/</link>
       <atom:link href="https://heykieran.github.io/tag/gke/index.xml" rel="self" type="application/rss+xml" />
     <description>GKE</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Thu, 28 May 2020 05:49:44 -0400</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2021</copyright><lastBuildDate>Sat, 20 Jun 2020 05:49:44 -0400</lastBuildDate>
     <image>
-      <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png</url>
+      <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_3.png</url>
       <title>GKE</title>
       <link>https://heykieran.github.io/tag/gke/</link>
     </image>
+    
+    <item>
+      <title>Implement trustless security on GKE using IAP</title>
+      <link>https://heykieran.github.io/post/secure-app-with-iap/</link>
+      <pubDate>Sat, 20 Jun 2020 05:49:44 -0400</pubDate>
+      <guid>https://heykieran.github.io/post/secure-app-with-iap/</guid>
+      <description>&lt;h1 id=&#34;set-up-iap&#34;&gt;Set up IAP&lt;/h1&gt;
+&lt;p&gt;Add the correct URI to the list of  &amp;ldquo;Authorized Redirect URI&amp;rsquo;s&amp;rdquo; on the Credentials screen (the blah-blah is your project&amp;rsquo;s clientID)&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;`https://iap.googleapis.com/v1/oauth/clientIds/486988131533-luvn04a1l3cbit82ihgrq4ioobq33kt3.apps.googleusercontent.com:handleRedirect`
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Download JSON using the link at the top of the Client ID for Web Application, we&amp;rsquo;ll use the
+&lt;code&gt;client_id_key&lt;/code&gt; and the &lt;code&gt;client_secret_key&lt;/code&gt; values from it below.&lt;/p&gt;
+&lt;p&gt;Create a secret to be used by IAP&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;kubectl create secret generic allocations-iap-secret --from-literal=client_id=client_id_key \ --from-literal=client_secret=client_secret_key&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Add the IAP block to the backend config&lt;/p&gt;
+&lt;p&gt;File &lt;code&gt;be-config.yaml&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;apiVersion: cloud.google.com/v1beta1
+kind: BackendConfig
+metadata:
+  name: allocations-iap-config-default
+  # namespace: my-namespace
+spec:
+  iap:
+    enabled: true
+    oauthclientCredentials:
+      secretName: allocations-iap-secret
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and associate the service port with the bakend config&lt;/p&gt;
+&lt;p&gt;File &lt;code&gt;service.yaml&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;metadata:
+  annotations:
+    beta.cloud.google.com/backend-config: &#39;{&amp;quot;default&amp;quot;: &amp;quot;allocations-iap-config-default&amp;quot;}&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&#34;the-jwt-token&#34;&gt;The jwt token&lt;/h1&gt;
+&lt;p&gt;The &lt;code&gt;aud:&lt;/code&gt; value should be &lt;code&gt;/projects/PROJECT_NUMBER/global/backendServices/SERVICE_ID&lt;/code&gt;&lt;/p&gt;
+&lt;h1 id=&#34;get-the-project-number&#34;&gt;Get the Project Number&lt;/h1&gt;
+&lt;p&gt;The &lt;code&gt;PROJECT_NUMBER&lt;/code&gt; can be found using&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud projects describe PROJECT_ID
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and look for the &lt;code&gt;projectNumber:&lt;/code&gt; field.&lt;/p&gt;
+&lt;h1 id=&#34;get-the-service-id&#34;&gt;Get the Service ID&lt;/h1&gt;
+&lt;pre&gt;&lt;code&gt;$ gcloud compute backend-services describe k8s-be-31272--6743adf4e25dfdd9 --project=allocations-acco
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;unting-v1 &amp;ndash;global&lt;/p&gt;
+&lt;p&gt;and look for the &lt;code&gt;id:&lt;/code&gt; field.&lt;/p&gt;
+&lt;h1 id=&#34;stop-a-cluster&#34;&gt;Stop a Cluster&lt;/h1&gt;
+&lt;pre&gt;&lt;code&gt;`gcloud container clusters resize cluster-timpson-gray --num-nodes=0`
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&#34;start-a-cluster&#34;&gt;Start a Cluster&lt;/h1&gt;
+&lt;pre&gt;&lt;code&gt;`gcloud container clusters resize cluster-timpson-gray --num-nodes=1`
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>Deploy a Clojure Web Application to Kubernetes (GKE)</title>

@@ -5,9 +5,9 @@
     <link>https://heykieran.github.io/tag/security/</link>
       <atom:link href="https://heykieran.github.io/tag/security/index.xml" rel="self" type="application/rss+xml" />
     <description>security</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Wed, 03 Jun 2020 12:40:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2021</copyright><lastBuildDate>Wed, 03 Jun 2020 12:40:00 +0000</lastBuildDate>
     <image>
-      <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png</url>
+      <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_3.png</url>
       <title>security</title>
       <link>https://heykieran.github.io/tag/security/</link>
     </image>
@@ -154,7 +154,7 @@
 &lt;p&gt;Now, a consideration of the interceptor chain built by the &lt;code&gt;build-secured-route-vec-to&lt;/code&gt; function. This function taking as its first argument an interceptor (or handler function) will return a vector of interceptors appropriate for the dual functions of authenticating the &lt;strong&gt;user&lt;/strong&gt; and authorizing his/her access to the resource (uri). The function also accepts a number of other options, which we will return to later.&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;
-&lt;p&gt;The first interceptor in the security-related portion of the interceptor chain attempts to authenticate the user. It is provided a context map, and will update the &lt;code&gt;:request&lt;/code&gt; portion of the context map using the &lt;code&gt;buddy.auth.middleware/authentication-request&lt;/code&gt; function.
+&lt;p&gt;The first interceptor in the security-related portion of the interceptor chain attempts to authenticate the user. It is provided a context map, and will update the &lt;code&gt;:request&lt;/code&gt; portion of the context map using the &lt;code&gt;buddy.auth.middleware/authentication-request&lt;/code&gt; function. 
 This function takes as parameters the request, and the backend. It will populate the &lt;code&gt;:identity&lt;/code&gt; key of the request map if authentication suceeds (as determined by the backend). If the authentication fails the backend&amp;rsquo;s &lt;code&gt;:unauthorized-handler&lt;/code&gt; is called. This returns a 401 response to the client.&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
@@ -164,7 +164,7 @@ This function takes as parameters the request, and the backend. It will populate
 &lt;p&gt;Then the &lt;em&gt;&lt;strong&gt;error catching&lt;/strong&gt;&lt;/em&gt; interceptor (created by the function &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt;) is entered. It returns the received context map unchanged. It&amp;rsquo;s only responsibility is to handle exceptions that might be thrown later by the interceptors named &lt;code&gt;:alloc-auth-permission-checker&lt;/code&gt; and &lt;code&gt;:alloc-auth-access-rule-checker&lt;/code&gt;. These two interceptors in turn check the user&amp;rsquo;s access to a resource (uri) based on his/her assigned roles; and checks his/her access based on custom defined rules. (I provide a expanded description of both below.)&lt;/p&gt;
 &lt;div class=&#34;alert alert-note&#34;&gt;
 &lt;div&gt;
-  A benefit of using a single &lt;em&gt;error catching&lt;/em&gt; interceptor is that there is a consolidation of application responses in a single area of the code rather than having them spread throughout the code in other interceptors&amp;rsquo; &lt;code&gt;:error&lt;/code&gt; functions. The interceptor is created by the &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt; function which will select the appropriate &lt;em&gt;backend&lt;/em&gt; at the time an authentication or authorization error is encountered. Therefore, in addition to the consistency of responses mentioned above, this approach ensures that backends are fully &lt;em&gt;swappable&lt;/em&gt; and can be changed without impacting other areas of the code.
+  A benefit of using a single &lt;em&gt;error catching&lt;/em&gt; interceptor is that there is a consolidation of application responses in a single area of the code rather than having them spread throughout the code in other interceptors&#39; &lt;code&gt;:error&lt;/code&gt; functions. The interceptor is created by the &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt; function which will select the appropriate &lt;em&gt;backend&lt;/em&gt; at the time an authentication or authorization error is encountered. Therefore, in addition to the consistency of responses mentioned above, this approach ensures that backends are fully &lt;em&gt;swappable&lt;/em&gt; and can be changed without impacting other areas of the code.
 &lt;/div&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
@@ -178,7 +178,7 @@ This function takes as parameters the request, and the backend. It will populate
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;h2 id=&#34;access-rules&#34;&gt;Access Rules&lt;/h2&gt;
-&lt;p&gt;Access rules are helpful when an application developer want to allow access to a &lt;strong&gt;route&lt;/strong&gt; only under certain circumstances; circumstances that cannot be encoded in a &lt;strong&gt;route&lt;/strong&gt;&amp;lsquo;s uri pattern. As a trivial example, consider the situation where the developer wants to grant access to a uri pattern &lt;code&gt;/api/dostuff/:id&lt;/code&gt; between 9:00AM and 5:00PM only.&lt;/p&gt;
+&lt;p&gt;Access rules are helpful when an application developer want to allow access to a &lt;strong&gt;route&lt;/strong&gt; only under certain circumstances; circumstances that cannot be encoded in a &lt;strong&gt;route&lt;/strong&gt;&amp;rsquo;s uri pattern. As a trivial example, consider the situation where the developer wants to grant access to a uri pattern &lt;code&gt;/api/dostuff/:id&lt;/code&gt; between 9:00AM and 5:00PM only.&lt;/p&gt;
 &lt;p&gt;A way to achieve this is to use an &lt;strong&gt;access rule&lt;/strong&gt; defined according to the convention required by &lt;code&gt;buddy.auth.accessrules&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;Such a rule can be expressed as follows&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(def rule-1
@@ -446,7 +446,7 @@ This function takes as parameters the request, and the backend. It will populate
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;If the &lt;strong&gt;roles&lt;/strong&gt; associated with the user, and &lt;code&gt;assoc&lt;/code&gt;-ed into the context map earlier as &lt;code&gt;:alloc-auth/auth&lt;/code&gt; don&amp;rsquo;t intersect with the &lt;strong&gt;roles&lt;/strong&gt; required for access (stored in the &lt;code&gt;alloc-auth-permissions&lt;/code&gt; atom) an &lt;code&gt;ex-info&lt;/code&gt; exception is thrown. The exception will be handled by the &lt;strong&gt;error catcher&lt;/strong&gt; interceptor which will return the appropriate response to the client.&lt;/p&gt;
 &lt;h3 id=&#34;the-alloc-auth-access-rule-checker-interceptor&#34;&gt;The &lt;code&gt;:alloc-auth-access-rule-checker&lt;/code&gt; interceptor&lt;/h3&gt;
-&lt;p&gt;If the Pedestal interceptor chain which is built using &lt;code&gt;build-secured-route-vec-to&lt;/code&gt; was passed a &lt;code&gt;:rules&lt;/code&gt; parameter, this interceptor will run the rules&amp;rsquo; handler functions to decide whether access to the resource should be granted (returns &lt;code&gt;success&lt;/code&gt;) or denied (returns &lt;code&gt;error&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;If the Pedestal interceptor chain which is built using &lt;code&gt;build-secured-route-vec-to&lt;/code&gt; was passed a &lt;code&gt;:rules&lt;/code&gt; parameter, this interceptor will run the rules&#39; handler functions to decide whether access to the resource should be granted (returns &lt;code&gt;success&lt;/code&gt;) or denied (returns &lt;code&gt;error&lt;/code&gt;).&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn alloc-auth-rules-checker-interceptor-factory
   [rules]
   (interceptor/interceptor
@@ -512,7 +512,7 @@ service, it would be possible to have both &lt;code&gt;user@gmail.com&lt;/code&g
 &lt;p&gt;Fundamentally, authenticating and logging in merely associates a user
 with a web session. The session is the operative object and identities
 are not, and cannot be shared between sessions. A user may have multiple
-sessions open, but they don&amp;rsquo;t &amp;ldquo;&lt;em&gt;mingle&lt;/em&gt;&amp;quot;.&lt;/p&gt;
+sessions open, but they don&amp;rsquo;t &amp;ldquo;&lt;em&gt;mingle&lt;/em&gt;&amp;rdquo;.&lt;/p&gt;
 &lt;h3 id=&#34;ad-hoc-_affirmative_-login-method&#34;&gt;Ad-hoc &lt;em&gt;affirmative&lt;/em&gt; login method&lt;/h3&gt;
 &lt;p&gt;The application as presented allows a user to simply assert that they
 are a known user. The only reason this feature is included is to
@@ -668,7 +668,7 @@ and your figwheel/Jetty (for development mode only) servers.&lt;/p&gt;
 &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
-&lt;p&gt;In the &lt;code&gt;common-src/config/config.cljc&lt;/code&gt; you will need to set the following
+&lt;p&gt;In the &lt;code&gt;common-src/config/config.cljc&lt;/code&gt; you will need to set the following 
 variables&lt;/p&gt;
 &lt;table&gt;
 &lt;thead&gt;
@@ -705,7 +705,7 @@ variables&lt;/p&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
 &lt;p&gt;In the file &lt;code&gt;dev.cljs.edn&lt;/code&gt; change the &lt;code&gt;:open-url&lt;/code&gt; parameter to match your
-server&amp;rsquo;s name, and the ssl port used by figwheel. This should match
+server&amp;rsquo;s name, and the ssl port used by figwheel. This should match 
 &lt;code&gt;https://&amp;lt;my-hostname&amp;gt;:&amp;lt;pedestal-ssl-port&amp;gt;/r/home&lt;/code&gt;.&lt;/p&gt;
 &lt;h3 id=&#34;starting-the-servers&#34;&gt;Starting the Server(s)&lt;/h3&gt;
 &lt;h4 id=&#34;development-mode&#34;&gt;Development Mode&lt;/h4&gt;
@@ -774,10 +774,10 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-the-initial-view-of-the-home-page-no-logged-in-user&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The initial view of the home page (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The initial view of the home page (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1338&#34; height=&#34;352&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1338&#34; height=&#34;352&#34;&gt;
 &lt;/a&gt;
 
 
@@ -813,10 +813,10 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-the-main-menu-no-logged-in-user&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page-menu-no-logged-in-user_hufd402a6ba5fecc72c633474ae2fa3e3d_57047_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The main menu (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page-menu-no-logged-in-user_hufd402a6ba5fecc72c633474ae2fa3e3d_57047_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The main menu (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page-menu-no-logged-in-user_hufd402a6ba5fecc72c633474ae2fa3e3d_57047_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1338&#34; height=&#34;674&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page-menu-no-logged-in-user_hufd402a6ba5fecc72c633474ae2fa3e3d_57047_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1338&#34; height=&#34;674&#34;&gt;
 &lt;/a&gt;
 
 
@@ -859,10 +859,10 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-access-to-public-resource-is-allowed-no-logged-in-user&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/access-public-resource_huf6a3c9ebea043d4f5d4e6b23eba4a1b4_41499_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;Access to Public Resource is allowed (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/access-public-resource_huf6a3c9ebea043d4f5d4e6b23eba4a1b4_41499_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;Access to Public Resource is allowed (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/access-public-resource_huf6a3c9ebea043d4f5d4e6b23eba4a1b4_41499_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1340&#34; height=&#34;418&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/access-public-resource_huf6a3c9ebea043d4f5d4e6b23eba4a1b4_41499_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1340&#34; height=&#34;418&#34;&gt;
 &lt;/a&gt;
 
 
@@ -877,7 +877,8 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 
 &lt;p&gt;This is as expected as that resource is unsecured and available to anyone who can access the application.&lt;/p&gt;
 &lt;h3 id=&#34;sign-in-as-the-localuser-user&#34;&gt;Sign-In as the &lt;code&gt;:local/:user&lt;/code&gt; User&lt;/h3&gt;
-&lt;p&gt;On the Sign-In Page, click on the button labelled &lt;strong&gt;&lt;a href=&#34;mailto:user@timpsongray.com&#34;&gt;user@timpsongray.com&lt;/a&gt;&lt;/strong&gt;. This will associate you session with the application user &lt;code&gt;:user&lt;/code&gt;, who has been assigned the &lt;code&gt;:user&lt;/code&gt; &lt;strong&gt;role&lt;/strong&gt;. This form of sign-in is a &lt;code&gt;:local&lt;/code&gt; authority sign-in. The authority is granted by the application itself.&lt;/p&gt;
+&lt;p&gt;On the Sign-In Page, click on the button labelled &lt;strong&gt;
+&lt;a href=&#34;mailto:user@timpsongray.com&#34;&gt;user@timpsongray.com&lt;/a&gt;&lt;/strong&gt;. This will associate you session with the application user &lt;code&gt;:user&lt;/code&gt;, who has been assigned the &lt;code&gt;:user&lt;/code&gt; &lt;strong&gt;role&lt;/strong&gt;. This form of sign-in is a &lt;code&gt;:local&lt;/code&gt; authority sign-in. The authority is granted by the application itself.&lt;/p&gt;
 
 
 
@@ -899,10 +900,10 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-the-standard-sign-in-page-no-logged-in-user&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The Standard Sign-In Page (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The Standard Sign-In Page (&amp;lt;strong&amp;gt;no&amp;lt;/strong&amp;gt; logged-in user).&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1336&#34; height=&#34;868&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1336&#34; height=&#34;868&#34;&gt;
 &lt;/a&gt;
 
 
@@ -937,10 +938,10 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-after-the-user-user-has-signed-in&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-user-signed-in_hu88471979aee3312eae8537ac4b138fbe_46032_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;After the user &amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt; has signed in.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-user-signed-in_hu88471979aee3312eae8537ac4b138fbe_46032_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;After the user &amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt; has signed in.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-user-signed-in_hu88471979aee3312eae8537ac4b138fbe_46032_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1340&#34; height=&#34;372&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-user-signed-in_hu88471979aee3312eae8537ac4b138fbe_46032_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1340&#34; height=&#34;372&#34;&gt;
 &lt;/a&gt;
 
 
@@ -977,10 +978,10 @@ will be loaded. (You should have set this in &lt;code&gt;dev.cljs.edn&lt;/code&g
 &lt;figure id=&#34;figure-the-user-user-is-allowed-to-access-to-the-user-resource&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-user-page-ok_hua77f555305a4e482c429b34566c4f1b6_45163_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The user (&amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt;) is allowed to access to the &amp;lt;strong&amp;gt;User&amp;lt;/strong&amp;gt; resource.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-user-page-ok_hua77f555305a4e482c429b34566c4f1b6_45163_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The user (&amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt;) is allowed to access to the &amp;lt;strong&amp;gt;User&amp;lt;/strong&amp;gt; resource.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-user-page-ok_hua77f555305a4e482c429b34566c4f1b6_45163_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1344&#34; height=&#34;426&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-user-page-ok_hua77f555305a4e482c429b34566c4f1b6_45163_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1344&#34; height=&#34;426&#34;&gt;
 &lt;/a&gt;
 
 
@@ -1017,10 +1018,10 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-the-user-user-is-denied-access-to-the-admin-resource&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-admin-page-denied_hu8fda4bc3b88839b1d49961b5d15e137b_125581_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The user (&amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt;) is denied access to the &amp;lt;strong&amp;gt;Admin&amp;lt;/strong&amp;gt; resource.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-admin-page-denied_hu8fda4bc3b88839b1d49961b5d15e137b_125581_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The user (&amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt;) is denied access to the &amp;lt;strong&amp;gt;Admin&amp;lt;/strong&amp;gt; resource.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-admin-page-denied_hu8fda4bc3b88839b1d49961b5d15e137b_125581_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1334&#34; height=&#34;592&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/user-accesses-admin-page-denied_hu8fda4bc3b88839b1d49961b5d15e137b_125581_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1334&#34; height=&#34;592&#34;&gt;
 &lt;/a&gt;
 
 
@@ -1056,10 +1057,10 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-a-view-of-the-standard-sign-out-page-with-user-user-is-logged-in&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/local-user-sign-out_hu5288488acb08e3af3122c648af377573_121592_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;A view of the standard Sign-Out page with user (&amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt;) is logged in.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/local-user-sign-out_hu5288488acb08e3af3122c648af377573_121592_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;A view of the standard Sign-Out page with user (&amp;lt;code&amp;gt;:user&amp;lt;/code&amp;gt;) is logged in.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/local-user-sign-out_hu5288488acb08e3af3122c648af377573_121592_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1334&#34; height=&#34;1170&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/local-user-sign-out_hu5288488acb08e3af3122c648af377573_121592_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1334&#34; height=&#34;1170&#34;&gt;
 &lt;/a&gt;
 
 
@@ -1094,10 +1095,10 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-returned-to-home-page-after-user-signs-out&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;Returned to Home Page after user signs out.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;Returned to Home Page after user signs out.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1338&#34; height=&#34;352&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/home-page_huaaba3d4bf3897864ad8c0dbe2950fa00_42345_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1338&#34; height=&#34;352&#34;&gt;
 &lt;/a&gt;
 
 
@@ -1133,10 +1134,10 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-the-standard-sign-in-page&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The Standard Sign-In Page.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The Standard Sign-In Page.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1336&#34; height=&#34;868&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/sign-in-page_hu08d58e743afadb57a341d72a72bfa387_91827_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1336&#34; height=&#34;868&#34;&gt;
 &lt;/a&gt;
 
 
@@ -1171,10 +1172,10 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-the-google-sign-in-dialog&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-login-dialog_hu00c65657a65268155e33b18fe1910fb9_72909_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The Google Sign-In Dialog.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-login-dialog_hu00c65657a65268155e33b18fe1910fb9_72909_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The Google Sign-In Dialog.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-login-dialog_hu00c65657a65268155e33b18fe1910fb9_72909_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1178&#34; height=&#34;712&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-login-dialog_hu00c65657a65268155e33b18fe1910fb9_72909_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1178&#34; height=&#34;712&#34;&gt;
 &lt;/a&gt;
 
 
@@ -1209,10 +1210,10 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-the-home-page-with-google-signed-in-user&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-login-home_hu0f008ac669061a5310176bfbdabf1530_48835_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The Home Page with Google signed-in user.&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-login-home_hu0f008ac669061a5310176bfbdabf1530_48835_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The Home Page with Google signed-in user.&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-login-home_hu0f008ac669061a5310176bfbdabf1530_48835_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1478&#34; height=&#34;352&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-login-home_hu0f008ac669061a5310176bfbdabf1530_48835_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1478&#34; height=&#34;352&#34;&gt;
 &lt;/a&gt;
 
 
@@ -1225,7 +1226,8 @@ an access denied message.&lt;/p&gt;
 
 &lt;/figure&gt;
 
-&lt;p&gt;Because &lt;strong&gt;&lt;a href=&#34;mailto:heykieran@gmail.com&#34;&gt;heykieran@gmail.com&lt;/a&gt;&lt;/strong&gt; is an alias for the user &lt;code&gt;:admin&lt;/code&gt;, that is the ID displayed in the top-right corner of the page, and consequently access to the API endpoints restricted to users in the &lt;code&gt;:admin&lt;/code&gt; role will be allowed.&lt;/p&gt;
+&lt;p&gt;Because &lt;strong&gt;
+&lt;a href=&#34;mailto:heykieran@gmail.com&#34;&gt;heykieran@gmail.com&lt;/a&gt;&lt;/strong&gt; is an alias for the user &lt;code&gt;:admin&lt;/code&gt;, that is the ID displayed in the top-right corner of the page, and consequently access to the API endpoints restricted to users in the &lt;code&gt;:admin&lt;/code&gt; role will be allowed.&lt;/p&gt;
 &lt;h3 id=&#34;signing-out&#34;&gt;Signing Out&lt;/h3&gt;
 &lt;p&gt;If you click on the &lt;strong&gt;Users&lt;/strong&gt; menu item you can return to the Sign-In/Sign-Out page to disconnect your session from the Google account using the &lt;strong&gt;Sign Out&lt;/strong&gt; button. This disconnects your application session, but does &lt;strong&gt;not&lt;/strong&gt; log you out from Google.&lt;/p&gt;
 
@@ -1249,10 +1251,10 @@ an access denied message.&lt;/p&gt;
 &lt;figure id=&#34;figure-the-users-page-with-a-signed-in-google-user-mapped-to-application-id-admin&#34;&gt;
 
 
-  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-sign-out-page_hua45813ca70e13bb9a469ee5545a5e2d9_106661_2000x2000_fit_lanczos_2.png&#34; data-caption=&#34;The Users page with a Signed-In Google user (mapped to application ID &amp;lt;code&amp;gt;:admin&amp;lt;/code&amp;gt;).&#34;&gt;
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-sign-out-page_hua45813ca70e13bb9a469ee5545a5e2d9_106661_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;The Users page with a Signed-In Google user (mapped to application ID &amp;lt;code&amp;gt;:admin&amp;lt;/code&amp;gt;).&#34;&gt;
 
 
-  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-sign-out-page_hua45813ca70e13bb9a469ee5545a5e2d9_106661_2000x2000_fit_lanczos_2.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1340&#34; height=&#34;908&#34;&gt;
+  &lt;img data-src=&#34;https://heykieran.github.io/post/pedestal-and-google/static/img/google-user-sign-out-page_hua45813ca70e13bb9a469ee5545a5e2d9_106661_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;1340&#34; height=&#34;908&#34;&gt;
 &lt;/a&gt;
 
 

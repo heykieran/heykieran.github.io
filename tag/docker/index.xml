@@ -5,12 +5,31 @@
     <link>https://heykieran.github.io/tag/docker/</link>
       <atom:link href="https://heykieran.github.io/tag/docker/index.xml" rel="self" type="application/rss+xml" />
     <description>docker</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Thu, 07 May 2020 12:10:26 -0400</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2021</copyright><lastBuildDate>Sat, 09 May 2020 11:53:08 -0400</lastBuildDate>
     <image>
-      <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png</url>
+      <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_3.png</url>
       <title>docker</title>
       <link>https://heykieran.github.io/tag/docker/</link>
     </image>
+    
+    <item>
+      <title>Integrating a full build process within a Clojure/Clojurescript Application</title>
+      <link>https://heykieran.github.io/post/integrated-build-to-docker/static/</link>
+      <pubDate>Sat, 09 May 2020 11:53:08 -0400</pubDate>
+      <guid>https://heykieran.github.io/post/integrated-build-to-docker/static/</guid>
+      <description>&lt;h1 id=&#34;introduction&#34;&gt;Introduction&lt;/h1&gt;
+&lt;h2 id=&#34;the-makefile&#34;&gt;The Makefile&lt;/h2&gt;
+&lt;p&gt;The repository also contains a Makefile that streamlines building the application and the docker image easier.&lt;/p&gt;
+&lt;p&gt;The following targets are defined:&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;clean-all&lt;/code&gt; - cleans out all compilation and build artifacts&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;clean-build&lt;/code&gt; - deletes the ClojureScript and JVM build artifacts. Does not remove any docker build artifacts.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;clean-deploy&lt;/code&gt; - deletes the docker build artifacts in &lt;code&gt;./docker/deploy&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;build&lt;/code&gt; - build the ClojureScript production &lt;code&gt;js&lt;/code&gt; file, and the JVM &lt;code&gt;.classes&lt;/code&gt; files&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;docker&lt;/code&gt; - builds the docker image&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;docker/deploy&lt;/code&gt; - assembles all the artifacts needed to build the docker image to the &lt;code&gt;docker/deploy&lt;/code&gt; directory, and cleans out any unnecessary files and directories&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;run-local&lt;/code&gt; - using the &lt;code&gt;java&lt;/code&gt; command runs the application from the application jar in the &lt;code&gt;docker/deploy&lt;/code&gt; directory.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Deploy a Clojure Pedestal API Server &amp; React/ClojureScript Web Application to Docker</title>

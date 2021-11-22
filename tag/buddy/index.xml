@@ -5,9 +5,9 @@
     <link>https://heykieran.github.io/tag/buddy/</link>
       <atom:link href="https://heykieran.github.io/tag/buddy/index.xml" rel="self" type="application/rss+xml" />
     <description>buddy</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2020</copyright><lastBuildDate>Sat, 06 Jun 2020 05:49:44 -0400</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2021</copyright><lastBuildDate>Wed, 03 Jun 2020 12:40:00 +0000</lastBuildDate>
     <image>
-      <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_2.png</url>
+      <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_3.png</url>
       <title>buddy</title>
       <link>https://heykieran.github.io/tag/buddy/</link>
     </image>
@@ -154,7 +154,7 @@
 &lt;p&gt;Now, a consideration of the interceptor chain built by the &lt;code&gt;build-secured-route-vec-to&lt;/code&gt; function. This function taking as its first argument an interceptor (or handler function) will return a vector of interceptors appropriate for the dual functions of authenticating the &lt;strong&gt;user&lt;/strong&gt; and authorizing his/her access to the resource (uri). The function also accepts a number of other options, which we will return to later.&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;
-&lt;p&gt;The first interceptor in the security-related portion of the interceptor chain attempts to authenticate the user. It is provided a context map, and will update the &lt;code&gt;:request&lt;/code&gt; portion of the context map using the &lt;code&gt;buddy.auth.middleware/authentication-request&lt;/code&gt; function.
+&lt;p&gt;The first interceptor in the security-related portion of the interceptor chain attempts to authenticate the user. It is provided a context map, and will update the &lt;code&gt;:request&lt;/code&gt; portion of the context map using the &lt;code&gt;buddy.auth.middleware/authentication-request&lt;/code&gt; function. 
 This function takes as parameters the request, and the backend. It will populate the &lt;code&gt;:identity&lt;/code&gt; key of the request map if authentication suceeds (as determined by the backend). If the authentication fails the backend&amp;rsquo;s &lt;code&gt;:unauthorized-handler&lt;/code&gt; is called. This returns a 401 response to the client.&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
@@ -164,7 +164,7 @@ This function takes as parameters the request, and the backend. It will populate
 &lt;p&gt;Then the &lt;em&gt;&lt;strong&gt;error catching&lt;/strong&gt;&lt;/em&gt; interceptor (created by the function &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt;) is entered. It returns the received context map unchanged. It&amp;rsquo;s only responsibility is to handle exceptions that might be thrown later by the interceptors named &lt;code&gt;:alloc-auth-permission-checker&lt;/code&gt; and &lt;code&gt;:alloc-auth-access-rule-checker&lt;/code&gt;. These two interceptors in turn check the user&amp;rsquo;s access to a resource (uri) based on his/her assigned roles; and checks his/her access based on custom defined rules. (I provide a expanded description of both below.)&lt;/p&gt;
 &lt;div class=&#34;alert alert-note&#34;&gt;
 &lt;div&gt;
-  A benefit of using a single &lt;em&gt;error catching&lt;/em&gt; interceptor is that there is a consolidation of application responses in a single area of the code rather than having them spread throughout the code in other interceptors&amp;rsquo; &lt;code&gt;:error&lt;/code&gt; functions. The interceptor is created by the &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt; function which will select the appropriate &lt;em&gt;backend&lt;/em&gt; at the time an authentication or authorization error is encountered. Therefore, in addition to the consistency of responses mentioned above, this approach ensures that backends are fully &lt;em&gt;swappable&lt;/em&gt; and can be changed without impacting other areas of the code.
+  A benefit of using a single &lt;em&gt;error catching&lt;/em&gt; interceptor is that there is a consolidation of application responses in a single area of the code rather than having them spread throughout the code in other interceptors&#39; &lt;code&gt;:error&lt;/code&gt; functions. The interceptor is created by the &lt;code&gt;alloc-auth-unauthorized-interceptor&lt;/code&gt; function which will select the appropriate &lt;em&gt;backend&lt;/em&gt; at the time an authentication or authorization error is encountered. Therefore, in addition to the consistency of responses mentioned above, this approach ensures that backends are fully &lt;em&gt;swappable&lt;/em&gt; and can be changed without impacting other areas of the code.
 &lt;/div&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
@@ -178,7 +178,7 @@ This function takes as parameters the request, and the backend. It will populate
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;h2 id=&#34;access-rules&#34;&gt;Access Rules&lt;/h2&gt;
-&lt;p&gt;Access rules are helpful when an application developer want to allow access to a &lt;strong&gt;route&lt;/strong&gt; only under certain circumstances; circumstances that cannot be encoded in a &lt;strong&gt;route&lt;/strong&gt;&amp;lsquo;s uri pattern. As a trivial example, consider the situation where the developer wants to grant access to a uri pattern &lt;code&gt;/api/dostuff/:id&lt;/code&gt; between 9:00AM and 5:00PM only.&lt;/p&gt;
+&lt;p&gt;Access rules are helpful when an application developer want to allow access to a &lt;strong&gt;route&lt;/strong&gt; only under certain circumstances; circumstances that cannot be encoded in a &lt;strong&gt;route&lt;/strong&gt;&amp;rsquo;s uri pattern. As a trivial example, consider the situation where the developer wants to grant access to a uri pattern &lt;code&gt;/api/dostuff/:id&lt;/code&gt; between 9:00AM and 5:00PM only.&lt;/p&gt;
 &lt;p&gt;A way to achieve this is to use an &lt;strong&gt;access rule&lt;/strong&gt; defined according to the convention required by &lt;code&gt;buddy.auth.accessrules&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;Such a rule can be expressed as follows&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(def rule-1
@@ -446,7 +446,7 @@ This function takes as parameters the request, and the backend. It will populate
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;If the &lt;strong&gt;roles&lt;/strong&gt; associated with the user, and &lt;code&gt;assoc&lt;/code&gt;-ed into the context map earlier as &lt;code&gt;:alloc-auth/auth&lt;/code&gt; don&amp;rsquo;t intersect with the &lt;strong&gt;roles&lt;/strong&gt; required for access (stored in the &lt;code&gt;alloc-auth-permissions&lt;/code&gt; atom) an &lt;code&gt;ex-info&lt;/code&gt; exception is thrown. The exception will be handled by the &lt;strong&gt;error catcher&lt;/strong&gt; interceptor which will return the appropriate response to the client.&lt;/p&gt;
 &lt;h3 id=&#34;the-alloc-auth-access-rule-checker-interceptor&#34;&gt;The &lt;code&gt;:alloc-auth-access-rule-checker&lt;/code&gt; interceptor&lt;/h3&gt;
-&lt;p&gt;If the Pedestal interceptor chain which is built using &lt;code&gt;build-secured-route-vec-to&lt;/code&gt; was passed a &lt;code&gt;:rules&lt;/code&gt; parameter, this interceptor will run the rules&amp;rsquo; handler functions to decide whether access to the resource should be granted (returns &lt;code&gt;success&lt;/code&gt;) or denied (returns &lt;code&gt;error&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;If the Pedestal interceptor chain which is built using &lt;code&gt;build-secured-route-vec-to&lt;/code&gt; was passed a &lt;code&gt;:rules&lt;/code&gt; parameter, this interceptor will run the rules&#39; handler functions to decide whether access to the resource should be granted (returns &lt;code&gt;success&lt;/code&gt;) or denied (returns &lt;code&gt;error&lt;/code&gt;).&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(defn alloc-auth-rules-checker-interceptor-factory
   [rules]
   (interceptor/interceptor
