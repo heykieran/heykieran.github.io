@@ -2,6 +2,9 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
+    <loc>https://heykieran.github.io/post/using-sse-and-websockets/</loc>
+    <lastmod>2020-06-23T16:51:15-04:00</lastmod>
+  </url><url>
     <loc>https://heykieran.github.io/authors/</loc>
     <lastmod>2020-06-25T14:41:43-04:00</lastmod>
   </url><url>
@@ -14,31 +17,10 @@
     <loc>https://heykieran.github.io/tag/clojure/</loc>
     <lastmod>2020-06-25T14:41:43-04:00</lastmod>
   </url><url>
-    <loc>https://heykieran.github.io/tag/deployment/</loc>
-    <lastmod>2020-06-25T14:41:43-04:00</lastmod>
-  </url><url>
-    <loc>https://heykieran.github.io/tag/gke/</loc>
+    <loc>https://heykieran.github.io/tag/clojurescript/</loc>
     <lastmod>2020-06-25T14:41:43-04:00</lastmod>
   </url><url>
     <loc>https://heykieran.github.io/</loc>
-    <lastmod>2020-06-25T14:41:43-04:00</lastmod>
-  </url><url>
-    <loc>https://heykieran.github.io/tag/iap/</loc>
-    <lastmod>2020-06-21T13:25:42-04:00</lastmod>
-  </url><url>
-    <loc>https://heykieran.github.io/post/secure-app-with-iap/</loc>
-    <lastmod>2020-06-21T13:25:42-04:00</lastmod>
-  </url><url>
-    <loc>https://heykieran.github.io/tag/kubernetes/</loc>
-    <lastmod>2020-06-25T14:41:43-04:00</lastmod>
-  </url><url>
-    <loc>https://heykieran.github.io/tags/</loc>
-    <lastmod>2020-06-25T14:41:43-04:00</lastmod>
-  </url><url>
-    <loc>https://heykieran.github.io/post/using-sse-and-websockets/</loc>
-    <lastmod>2020-06-23T16:51:15-04:00</lastmod>
-  </url><url>
-    <loc>https://heykieran.github.io/tag/clojurescript/</loc>
     <lastmod>2020-06-25T14:41:43-04:00</lastmod>
   </url><url>
     <loc>https://heykieran.github.io/tag/reframe/</loc>
@@ -46,6 +28,9 @@
   </url><url>
     <loc>https://heykieran.github.io/tag/sse/</loc>
     <lastmod>2020-06-23T16:51:15-04:00</lastmod>
+  </url><url>
+    <loc>https://heykieran.github.io/tags/</loc>
+    <lastmod>2020-06-25T14:41:43-04:00</lastmod>
   </url><url>
     <loc>https://heykieran.github.io/tag/websockets/</loc>
     <lastmod>2020-06-23T16:51:15-04:00</lastmod>
@@ -80,19 +65,22 @@
     <loc>https://heykieran.github.io/post/deploy-to-kubernetes-gke/</loc>
     <lastmod>2020-06-25T14:41:43-04:00</lastmod>
   </url><url>
-    <loc>https://heykieran.github.io/tag/badigeon/</loc>
-    <lastmod>2020-06-21T13:26:43-04:00</lastmod>
+    <loc>https://heykieran.github.io/tag/deployment/</loc>
+    <lastmod>2020-06-25T14:41:43-04:00</lastmod>
   </url><url>
-    <loc>https://heykieran.github.io/tag/docker/</loc>
-    <lastmod>2020-06-21T13:26:43-04:00</lastmod>
+    <loc>https://heykieran.github.io/tag/gke/</loc>
+    <lastmod>2020-06-25T14:41:43-04:00</lastmod>
   </url><url>
-    <loc>https://heykieran.github.io/post/integrated-build-to-docker/static/</loc>
-    <lastmod>2020-06-21T13:26:43-04:00</lastmod>
-  </url><url>
-    <loc>https://heykieran.github.io/tag/react/</loc>
-    <lastmod>2020-06-21T13:26:43-04:00</lastmod>
+    <loc>https://heykieran.github.io/tag/kubernetes/</loc>
+    <lastmod>2020-06-25T14:41:43-04:00</lastmod>
   </url><url>
     <loc>https://heykieran.github.io/post/deploy-pedestal-react-to-docker/</loc>
+    <lastmod>2020-06-21T13:25:42-04:00</lastmod>
+  </url><url>
+    <loc>https://heykieran.github.io/tag/docker/</loc>
+    <lastmod>2020-06-21T13:25:42-04:00</lastmod>
+  </url><url>
+    <loc>https://heykieran.github.io/tag/react/</loc>
     <lastmod>2020-06-21T13:25:42-04:00</lastmod>
   </url><url>
     <loc>https://heykieran.github.io/post/clojure-configuration/</loc>
@@ -111,12 +99,6 @@
     <lastmod>2020-05-28T17:39:32-04:00</lastmod>
   </url><url>
     <loc>https://heykieran.github.io/post/pedestal-jetty-https/</loc>
-    <lastmod>2020-05-28T17:39:32-04:00</lastmod>
-  </url><url>
-    <loc>https://heykieran.github.io/privacy/</loc>
-    <lastmod>2020-05-28T17:39:32-04:00</lastmod>
-  </url><url>
-    <loc>https://heykieran.github.io/terms/</loc>
     <lastmod>2020-05-28T17:39:32-04:00</lastmod>
   </url><url>
     <loc>https://heykieran.github.io/author/kieran-owens/</loc>
