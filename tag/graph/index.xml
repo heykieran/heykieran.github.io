@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>graph | heykieran Code Notes</title>
+    <link>https://heykieran.github.io/tag/graph/</link>
+      <atom:link href="https://heykieran.github.io/tag/graph/index.xml" rel="self" type="application/rss+xml" />
+    <description>graph</description>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><copyright>© Kieran J. Owens 2021</copyright><lastBuildDate>Mon, 22 Nov 2021 17:40:24 -0500</lastBuildDate>
+    <image>
+      <url>https://heykieran.github.io/images/logo_hu40a566661c85156769430146dbdc8595_41816_300x300_fit_lanczos_3.png</url>
+      <title>graph</title>
+      <link>https://heykieran.github.io/tag/graph/</link>
+    </image>
+    
+    <item>
+      <title>Convert an Excel Workbook to Clojure Code</title>
+      <link>https://heykieran.github.io/post/excel-to-clojure/</link>
+      <pubDate>Mon, 22 Nov 2021 17:40:24 -0500</pubDate>
+      <guid>https://heykieran.github.io/post/excel-to-clojure/</guid>
+      <description>&lt;h1 id=&#34;introduction&#34;&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;Developing software in the Accounting &amp;amp; Finance industry has some peculiar considerations that probably don&amp;rsquo;t exist in other industries. An active and ambitious engineering team&amp;rsquo;s incumbent competition is often not some &lt;em&gt;big&lt;/em&gt;, legacy, bespoke system that needs to be replaced or adjusted, while incorporating new features and capabilities: but is often an Excel workbook (or even a number of connected workbooks) where business logic, rules and calculations are captured, and which continuously evolves in an almost organic way.&lt;/p&gt;
+&lt;p&gt;As new needs are identified by the business, an analyst or accountant will fire up Excel, pruning and grafting as necessary, and quickly produce a new version incorporating the business&#39; new requirements.&lt;/p&gt;
+&lt;p&gt;It&amp;rsquo;s a low-friction and efficient approach. The user with the best insight and information works in a tool with which he or she is completely comfortable. That user knows the inputs, knows the calculations and know the desired outcomes. What could be better?&lt;/p&gt;
+&lt;p&gt;It&amp;rsquo;s a steep hill for an engineering team to run up to convince anyone that what should &lt;em&gt;properly&lt;/em&gt; happen is that the financial-analyst should involve a business-analyst to document the business&#39; requirements, get sign-offs from various stake-holders, schedule some time with the product and engineering teams, who will at some undetermined time in the future produce an artifact that will, most likely, be outdated on the very day on which it arrives.&lt;/p&gt;
+&lt;p&gt;Yes, that&amp;rsquo;s a &lt;strong&gt;very&lt;/strong&gt; steep hill!&lt;/p&gt;
+&lt;p&gt;However, there are a number of very sound reasons to approach any maturation or evolution of critical business systems in this precise manner.&lt;/p&gt;
+&lt;p&gt;The legal and compliance teams get a little &lt;em&gt;&amp;ldquo;twitchy&amp;rdquo;&lt;/em&gt; when calculations and data that drive critical business decisions live exclusively in constantly evolving Excel workbooks. How do they verify correctness? How can they systematically evaluate the impact of any changes on business operations? How do they even know that the &lt;em&gt;ex ante&lt;/em&gt; and &lt;em&gt;ex post&lt;/em&gt; outcomes driven by calculations in Excel workbooks differ, and by how much?&lt;/p&gt;
+&lt;p&gt;These are difficult questions to answer and make it hard to evaluate operational risk, often requiring the business to engage in complex &lt;em&gt;hoop-jumping&lt;/em&gt; in order to avoid the outcome of crippling innovation and evolution, yet remaining committed to the concepts of sound operational governance. The approaches are many and varied - version control; manual and automated validation; automated forecasting and hindcasting with known inputs and expected outputs. The list goes on.&lt;/p&gt;
+&lt;p&gt;A better approach might be to let the analysts and &lt;em&gt;&amp;ldquo;business-heads&amp;rdquo;&lt;/em&gt; just go about their business as efficiently as possible, continuing to use Excel as the modelling tool, and &lt;strong&gt;only when&lt;/strong&gt; they are satisfied involve the software developers.&lt;/p&gt;
+&lt;p&gt;If, at that point, it were possible to convert to workbook to source code then the business would be in a better position to assess the impacts of any changes, whether they be in the mode of operation (i.e. calculations) or outcomes (i.e. the results of those calculations).&lt;/p&gt;
+&lt;h1 id=&#34;a-test-workbook&#34;&gt;A Test Workbook&lt;/h1&gt;
+&lt;p&gt;Let&amp;rsquo;s construct a relatively simple Excel workbook that records the scores attained by four individuals on two teams, calculates the totals for each team, and indicates which team won based on which team had the highest score.&lt;/p&gt;
+&lt;p&gt;The Workbook uses only the Excel functions &lt;code&gt;SUMIF&lt;/code&gt;, &lt;code&gt;MAX&lt;/code&gt; and &lt;code&gt;IF&lt;/code&gt;, but the approach would work in concept for any workbook, and is useful for illustrative purposes&lt;/p&gt;
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure id=&#34;figure-fig-1---a-view-of-our-simple-excel-workbook-showing-precedents-and-dependents-for-cell-b8&#34;&gt;
+
+
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/excel-to-clojure/static/img/Simple-Excel-Workbook_hu631d0d5aaf2b34be35a598968090ab42_19225_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;&amp;lt;strong&amp;gt;Fig. 1&amp;lt;/strong&amp;gt; - A view of our simple Excel Workbook showing precedents and dependents for cell &amp;lt;strong&amp;gt;B8&amp;lt;/strong&amp;gt;.&#34;&gt;
+
+
+  &lt;img data-src=&#34;https://heykieran.github.io/post/excel-to-clojure/static/img/Simple-Excel-Workbook_hu631d0d5aaf2b34be35a598968090ab42_19225_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;596&#34; height=&#34;306&#34;&gt;
+&lt;/a&gt;
+
+
+  
+  
+  &lt;figcaption&gt;
+    &lt;strong&gt;Fig. 1&lt;/strong&gt; - A view of our simple Excel Workbook showing precedents and dependents for cell &lt;strong&gt;B8&lt;/strong&gt;.
+  &lt;/figcaption&gt;
+
+
+&lt;/figure&gt;
+
+&lt;h2 id=&#34;excel-as-a-graph&#34;&gt;Excel as a Graph&lt;/h2&gt;
+&lt;p&gt;An Excel workbook can be expressed as a &lt;strong&gt;DAG&lt;/strong&gt; (directed acyclic graph) where each node is connected to the node(s) on which it depends and that depend on it. Even a node without dependent nodes (e.g. a simple &lt;code&gt;=1+1&lt;/code&gt;) can be incorporated in the DAG by connecting it to a synthetic node (&lt;code&gt;$$ROOT&lt;/code&gt;) at the root of its worksheet, and that node connected to another singleton node representing the root of the workbook (&lt;code&gt;$$ROOT&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;If we process the workbook using the code in the accompanying 
+&lt;a href=&#34;https://github.com/heykieran/xl-parse-clj&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;repository&lt;/a&gt;, we can produce a visualization of the DAG as follows:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(-&amp;gt; &amp;quot;SIMPLE-1.xlsx&amp;quot;
+    (explain-workbook)
+    (get-cell-dependencies)
+    (add-graph)
+    (connect-disconnected-regions)
+    (:graph)
+    (uber/viz-graph))
+&lt;/code&gt;&lt;/pre&gt;
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure id=&#34;figure-fig-2---the-workbooks-dag-including-synthetic-root-nodes&#34;&gt;
+
+
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/excel-to-clojure/static/img/Simple-DAG_hu566f97863e79aa7c8f487eb44a32af02_65860_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;&amp;lt;strong&amp;gt;Fig 2&amp;lt;/strong&amp;gt; - The Workbook&amp;amp;rsquo;s DAG including synthetic &amp;lt;code&amp;gt;$$ROOT&amp;lt;/code&amp;gt; nodes.&#34;&gt;
+
+
+  &lt;img data-src=&#34;https://heykieran.github.io/post/excel-to-clojure/static/img/Simple-DAG_hu566f97863e79aa7c8f487eb44a32af02_65860_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;947&#34; height=&#34;443&#34;&gt;
+&lt;/a&gt;
+
+
+  
+  
+  &lt;figcaption&gt;
+    &lt;strong&gt;Fig 2&lt;/strong&gt; - The Workbook&amp;rsquo;s DAG including synthetic &lt;code&gt;$$ROOT&lt;/code&gt; nodes.
+  &lt;/figcaption&gt;
+
+
+&lt;/figure&gt;
+
+&lt;p&gt;We can see from the DAG produced by the code, that the value of cell &lt;code&gt;B8&lt;/code&gt; (reading left to right) depends on the values of cells &lt;code&gt;C4&lt;/code&gt;, &lt;code&gt;C5&lt;/code&gt;, &lt;code&gt;C3&lt;/code&gt;, &lt;code&gt;B4&lt;/code&gt;, &lt;code&gt;B2&lt;/code&gt;, &lt;code&gt;B5&lt;/code&gt;, &lt;code&gt;C2&lt;/code&gt;, &lt;code&gt;B3&lt;/code&gt;, and &lt;code&gt;A8&lt;/code&gt;, and that its value is also a dependency of cells &lt;code&gt;C8&lt;/code&gt; and &lt;code&gt;C9&lt;/code&gt;. This is consistent with the &lt;em&gt;precedents&lt;/em&gt; and &lt;em&gt;dependents&lt;/em&gt; information that Excel reports, shown in &lt;strong&gt;Fig 1&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;We can also produce a visualization of the DAG that includes each node&amp;rsquo;s attributes by using&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(-&amp;gt; &amp;quot;SIMPLE-1.xlsx&amp;quot;
+    (explain-workbook)
+    (get-cell-dependencies)
+    (add-graph)
+    (connect-disconnected-regions)
+    (:graph)
+    (uber/viz-graph :auto-label true))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;which will display&lt;/p&gt;
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure id=&#34;figure-fig-3---the-workbooks-dag-with-node-details&#34;&gt;
+
+
+  &lt;a data-fancybox=&#34;&#34; href=&#34;https://heykieran.github.io/post/excel-to-clojure/static/img/Simple-DAG-with-attrs_hu2d4137e0c47c5629672bc7684dfff774_334234_2000x2000_fit_lanczos_3.png&#34; data-caption=&#34;&amp;lt;strong&amp;gt;Fig 3&amp;lt;/strong&amp;gt; - The Workbook&amp;amp;rsquo;s DAG with node details.&#34;&gt;
+
+
+  &lt;img data-src=&#34;https://heykieran.github.io/post/excel-to-clojure/static/img/Simple-DAG-with-attrs_hu2d4137e0c47c5629672bc7684dfff774_334234_2000x2000_fit_lanczos_3.png&#34; class=&#34;lazyload&#34; alt=&#34;&#34; width=&#34;3093&#34; height=&#34;1235&#34;&gt;
+&lt;/a&gt;
+
+
+  
+  
+  &lt;figcaption&gt;
+    &lt;strong&gt;Fig 3&lt;/strong&gt; - The Workbook&amp;rsquo;s DAG with node details.
+  &lt;/figcaption&gt;
+
+
+&lt;/figure&gt;
+
+&lt;p&gt;The graph, therefore, encodes all the information of the Excel workbook as a convenient Clojure data structure, which can be evaluated or manipulated as required.&lt;/p&gt;
+&lt;p&gt;A cell&amp;rsquo;s &lt;em&gt;node attributes&lt;/em&gt; contains a &lt;code&gt;:value&lt;/code&gt; key storing the cell&amp;rsquo;s value as calculated by Excel, and if it&amp;rsquo;s a &lt;em&gt;formula&lt;/em&gt; cell, the text of the formula in the &lt;code&gt;:formula&lt;/code&gt; key.&lt;/p&gt;
+&lt;p&gt;So far, so good. Now, the next step is to convert the Excel formulae to Clojure code, and to provide a way to evaluate that code in the proper order, as dictated by the DAG.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;The code below can be found in a Github 
+&lt;a href=&#34;https://github.com/heykieran/xl-parse-clj&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;repository&lt;/a&gt;, which contains significantly more detail about the approach taken and the implementation than can be conveniently covered in this post.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;the-excel-graph-as-code&#34;&gt;The Excel Graph as Code&lt;/h2&gt;
+&lt;p&gt;Using the data-structure calculated in this way, we can then convert each cell&amp;rsquo;s Excel formula to Clojure code and recalculate the workbook in our Clojure REPL according to the DAG: first using the values as supplied in the workbook in order to validate that the conversion results in the same calculated values; and then using other input values to test alternative input scenarios and the workbook&amp;rsquo;s responses to those inputs.&lt;/p&gt;
+&lt;p&gt;This provides a convenient way to both serialize the workbook as Clojure code, and to evaluate the workbook&amp;rsquo;s responses to different inputs.&lt;/p&gt;
+&lt;p&gt;If we run the following from a REPL,&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;(-&amp;gt; &amp;quot;SIMPLE-1.xlsx&amp;quot;
+    (explain-workbook)
+    (get-cell-dependencies)
+    (add-graph)
+    (connect-disconnected-regions)
+    ;; recalculate the workbook according to its dependencies,
+    ;; but using clojure code to perform the calculations
+    (recalc-workbook &amp;quot;Scores&amp;quot;)
+    (simplify-results))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;it produces the following output showing the Clojure code generated from the Excel formula (in &lt;code&gt;:clj-code&lt;/code&gt;); the value as calculated by Excel (&lt;code&gt;:excel-value&lt;/code&gt;); and, the value produced by the evaluated Clojure code (&lt;code&gt;:clj-value&lt;/code&gt;).&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-clojure&#34;&gt;[{:cell &amp;quot;Scores!B9&amp;quot;
+  :formula &amp;quot;SUMIF(B$2:B$5,A9,C$2:C$5)&amp;quot;
+  :clj-code (functions/fn-sumif
+              (eval-range
+                &amp;quot;Scores!B$2:B$5&amp;quot;)
+              (eval-range
+                &amp;quot;Scores!A9&amp;quot;)
+              (eval-range
+                &amp;quot;Scores!C$2:C$5&amp;quot;))
+  :excel-value 230.0
+  :clj-value 230.0}
+ {:cell &amp;quot;Scores!B8&amp;quot;
+  :formula &amp;quot;SUMIF(B$2:B$5,A8,C$2:C$5)&amp;quot;
+  :clj-code (functions/fn-sumif
+              (eval-range
+                &amp;quot;Scores!B$2:B$5&amp;quot;)
+              (eval-range
+                &amp;quot;Scores!A8&amp;quot;)
+              (eval-range
+                &amp;quot;Scores!C$2:C$5&amp;quot;))
+  :excel-value 220.0
+  :clj-value 220.0}
+ {:cell &amp;quot;Scores!C9&amp;quot;
+  :formula &amp;quot;IF(B9=MAX(B$8:B$9),\&amp;quot;WINNER\&amp;quot;, \&amp;quot;\&amp;quot;)&amp;quot;
+  :clj-code (if
+              (functions/fn-equal
+                (eval-range
+                  &amp;quot;Scores!B9&amp;quot;)
+                (functions/fn-max
+                  (eval-range
+                    &amp;quot;Scores!B$8:B$9&amp;quot;)))
+              (str
+                &amp;quot;WINNER&amp;quot;)
+              (str
+                &amp;quot;&amp;quot;))
+  :excel-value &amp;quot;WINNER&amp;quot;
+  :clj-value &amp;quot;WINNER&amp;quot;}
+ {:cell &amp;quot;Scores!C8&amp;quot;
+  :formula &amp;quot;IF(B8=MAX(B$8:B$9),\&amp;quot;WINNER\&amp;quot;, \&amp;quot;\&amp;quot;)&amp;quot;
+  :clj-code (if
+              (functions/fn-equal
+                (eval-range
+                  &amp;quot;Scores!B8&amp;quot;)
+                (functions/fn-max
+                  (eval-range
+                    &amp;quot;Scores!B$8:B$9&amp;quot;)))
+              (str
+                &amp;quot;WINNER&amp;quot;)
+              (str
+                &amp;quot;&amp;quot;))
+  :excel-value &amp;quot;&amp;quot;
+  :clj-value &amp;quot;&amp;quot;}]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You can see that the values calculated by evaluating the workbook in the REPL are precisely equal to the results calculated by Excel itself.&lt;/p&gt;
+&lt;p&gt;Also, by manipulating the underlying data-structure returned by &lt;code&gt;explain-workbook&lt;/code&gt; it is possible to test the responses of the evaluation to different inputs. For example, it is possible, using Clojure, to update the scores for each player and then to recalculate the workbook using those values.&lt;/p&gt;
+&lt;h1 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;The above demonstrates the feasibility of using Clojure&amp;rsquo;s inherent ability to manipulate code data-structures to convert an Excel workbook to Clojure code, and to provide a sound rationale for allowing analysts and accountants to continue to use the tools with which they are most familiar, and to then subsequently take the fruits of their labors and convert them to a form that&amp;rsquo;s systematically comparable, versionable and testable.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
